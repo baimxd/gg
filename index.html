@@ -1,1 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FunRoom — Tiny Arcade</title>
+<style>
+  :root{
+    --bg1:#0b1020; --bg2:#121a34; --card:#101831; --ink:#e9f1ff;
+    --acc:#72f5ff; --acc2:#b17dff; --good:#7aff9a; --bad:#ff6b8b;
+    --shadow:0 12px 40px rgba(0,0,0,.35);
+  }
+  body{ margin:0; min-height:100vh; color:var(--ink);
+    background: radial-gradient(900px 600px at 15% 15%, #1a2751, transparent 60%),
+                radial-gradient(1000px 700px at 85% 70%, #1e2d59, transparent 60%),
+                linear-gradient(180deg, var(--bg1), var(--bg2));
+    font:600 16px/1.5 Inter,system-ui,Segoe UI,Roboto,Arial;
+  }
+  header{
+    display:flex; gap:12px; align-items:center; justify-content:space-between;
+    padding:16px; position:sticky; top:0; z-index:5; backdrop-filter:blur(10px);
+    background:#00000040; border-bottom:1px solid #ffffff22;
+  }
+  .brand{ font-weight:900; letter-spacing:.06em; text-transform:uppercase; display:flex; gap:10px; align-items:center; }
+  .dot{ width:10px; height:10px; border-radius:50%; background:var(--acc); box-shadow:0 0 14px var(--acc); }
+  nav{ display:flex; flex-wrap:wrap; gap:8px; }
+  .tab{ border:1px solid #ffffff25; padding:8px 12px; border-radius:12px; cursor:pointer; background:#ffffff10; }
+  .tab.active{ background:linear-gradient(90deg, #ffffff15, #ffffff08); box-shadow:0 0 0 1px #ffffff22 inset, 0 0 24px #72f5ff33; }
+  .right{ display:flex; gap:8px; align-items:center; }
+  .btn{ border:1px solid #ffffff25; background:#ffffff10; padding:8px 12px; border-radius:12px; cursor:pointer; }
+  .wrap{ max-width:1100px; margin:20px auto; padding:0 16px 60px; }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+  .card{ background:linear-gradient(180deg,#ffffff12,#ffffff08); border:1px solid #ffffff25; border-radius:16px; box-shadow:var(--shadow); padding:16px; }
+  h2{ margin:0 0 8px 0; }
+  .row{ display:flex; gap:14px; flex-wrap:wrap; }
+  .col{ flex:1 1 320px; }
+  .pill{ font-size:12px; color:#c9d6ff; padding:4px 10px; border:1px dashed #ffffff33; border-radius:999px; }
+  .score{ font-weight:900; }
+  .grid{ display:grid; gap:8px; }
+  /* Whack-a-Mole */
+  .mole-grid{ grid-template-columns: repeat(4, 1fr); }
+  .hole{
+    aspect-ratio:1/1; border-radius:14px; border:1px solid #ffffff33; position:relative; overflow:hidden;
+    background:radial-gradient(120px 60px at 50% 80%, #00000070, #00000010), #0c1430;
+    cursor:crosshair;
+  }
+  .mole{
+    position:absolute; left:50%; bottom:-100%; transform:translateX(-50%);
+    width:70%; aspect-ratio:1/1; border-radius:50%; background:radial-gradient(circle at 30% 30%, #ffef, #ff7d9b);
+    box-shadow:0 8px 26px #ff6b8b66; border:2px solid #ffffff55; transition:bottom .14s ease-out;
+  }
+  .hole.show .mole{ bottom:8%; }
+  /* Memory */
+  .mem-grid{ grid-template-columns: repeat(6, 1fr); }
+  .cardmem{
+    aspect-ratio:3/4; border-radius:12px; cursor:pointer; position:relative; transform-style:preserve-3d; transition:transform .35s;
+  }
+  .cardmem.flip{ transform:rotateY(180deg); }
+  .face{
+    position:absolute; inset:0; border:1px solid #ffffff33; border-radius:12px; backface-visibility:hidden; display:grid; place-items:center; font-size:28px;
+    background:#0e1737;
+  }
+  .back{ transform:rotateY(180deg); background:linear-gradient(145deg,#72f5ff33,#b17dff33); }
+  /* Typing */
+  .typebox{
+    font:700 18px/1.8 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background:#00000066; color:#9fe2ff; padding:16px; border-radius:12px; border:1px solid #ffffff33; min-height:130px;
+  }
+  .typebox .done{ color:#7aff9a; }
+  .typebox .bad{ color:#ff7d9b; text-decoration:underline; }
+  input[type="text"], input[type="number"]{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid #ffffff33; background:#ffffff10; color:var(--ink);
+  }
+  /* Clicker */
+  .bigbtn{
+    width:220px; height:220px; border-radius:50%; border:2px solid #ffffff33; background:radial-gradient(circle at 35% 25%, #ffffff18, #ffffff06);
+    display:grid; place-items:center; font-size:26px; font-weight:900; cursor:pointer; user-select:none; box-shadow:0 10px 50px #72f5ff33;
+  }
+  .float{ position:absolute; pointer-events:none; font-weight:900; }
+  /* Confetti */
+  canvas#confetti{ position:fixed; inset:0; pointer-events:none; }
+  /* Day/Night */
+  .night{ filter:hue-rotate(22deg) brightness(.93); }
+  @media (max-width:900px){ .mem-grid{ grid-template-columns: repeat(4, 1fr); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span> FUNROOM</div>
+  <nav id="tabs"></nav>
+  <div class="right">
+    <span class="pill">Highscores saved locally</span>
+    <button id="theme" class="btn">🌙 Night</button>
+    <button id="confbtn" class="btn">🎉 Confetti</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- Whack-a-Mole -->
+  <section class="panel active" id="mole">
+    <div class="row">
+      <div class="col card">
+        <h2>Whack-A-Mole</h2>
+        <div class="pill">Click moles, avoid empty holes. 60s timer.</div>
+        <p>Score: <span class="score" id="moleScore">0</span> — Best: <span id="moleBest">0</span></p>
+        <div class="row">
+          <button class="btn" id="moleStart">Start</button>
+          <button class="btn" id="moleStop">Stop</button>
+          <label style="display:flex;align-items:center;gap:8px">Speed
+            <input id="moleSpeed" type="range" min="350" max="1200" step="50" value="700" />
+          </label>
+          <span id="moleTimer" class="pill">Time: 60</span>
+        </div>
+      </div>
+      <div class="col card">
+        <div class="grid mole-grid" id="moleGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Memory Match -->
+  <section class="panel" id="memory">
+    <div class="row">
+      <div class="col card">
+        <h2>Memory Match</h2>
+        <div class="pill">Flip two — match pairs fast.</div>
+        <p>Moves: <span class="score" id="memMoves">0</span> — Best (fewest): <span id="memBest">—</span></p>
+        <div class="row">
+          <button class="btn" id="memNew">New Game</button>
+          <label style="display:flex;align-items:center;gap:8px">Pairs
+            <input id="memPairs" type="number" min="6" max="18" value="10" />
+          </label>
+        </div>
+      </div>
+      <div class="col card">
+        <div class="grid mem-grid" id="memGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Type Sprint -->
+  <section class="panel" id="type">
+    <div class="row">
+      <div class="col card">
+        <h2>Type Sprint</h2>
+        <div class="pill">Type the passage. Timer starts on first key.</div>
+        <p>WPM: <span class="score" id="wpm">0</span> — Best: <span id="typeBest">0</span></p>
+        <div class="row">
+          <button class="btn" id="typeNew">New Text</button>
+          <select id="typeSize" class="btn">
+            <option value="short">Short</option>
+            <option value="med" selected>Medium</option>
+            <option value="long">Long</option>
+          </select>
+          <span id="typeTime" class="pill">0.00s</span>
+        </div>
+      </div>
+      <div class="col card">
+        <div id="typeText" class="typebox"></div>
+        <input id="typeInput" type="text" placeholder="Start typing here..." />
+      </div>
+    </div>
+  </section>
+
+  <!-- Clicker -->
+  <section class="panel" id="clicker">
+    <div class="row">
+      <div class="col card">
+        <h2>Cookie-ish Clicker</h2>
+        <div class="pill">Click the orb, buy upgrades, chase combos.</div>
+        <p>Clicks: <span class="score" id="clk">0</span> — Best: <span id="clkBest">0</span></p>
+        <div class="row">
+          <button class="btn" id="resetClk">Reset</button>
+          <span class="pill" id="combo">Combo x1</span>
+        </div>
+      </div>
+      <div class="col card" style="position:relative; display:grid; place-items:center; overflow:hidden;">
+        <div id="big" class="bigbtn">TAP</div>
+        <div id="floaters"></div>
+      </div>
+      <div class="col card">
+        <h3>Upgrades</h3>
+        <div id="shop"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<canvas id="confetti"></canvas>
+<audio id="pop" preload="auto">
+  <source src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCA" type="audio/mp3">
+</audio>
+
+<script>
+/* ---------- Tabs ---------- */
+const tabs = [
+  {id:'mole', name:'Whack-A-Mole'}, 
+  {id:'memory', name:'Memory Match'},
+  {id:'type', name:'Type Sprint'},
+  {id:'clicker', name:'Clicker'}
+];
+const nav = document.getElementById('tabs');
+tabs.forEach((t,i)=>{
+  const b=document.createElement('button');
+  b.className='tab'+(i===0?' active':'');
+  b.textContent=t.name; b.onclick=()=>switchTab(t.id,b);
+  nav.appendChild(b);
+});
+function switchTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ---------- Theme + Confetti ---------- */
+const themeBtn = document.getElementById('theme');
+themeBtn.onclick=()=>{ document.body.classList.toggle('night'); themeBtn.textContent = document.body.classList.contains('night')?'☀️ Day':'🌙 Night'; };
+const confBtn = document.getElementById('confbtn');
+
+/* Confetti */
+const ccv=document.getElementById('confetti'), cctx=ccv.getContext('2d');
+let DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
+function sizeConf(){ ccv.width=innerWidth*DPR; ccv.height=innerHeight*DPR; }
+addEventListener('resize', sizeConf); sizeConf();
+let bits=[];
+function confetti(x=innerWidth/2, y=innerHeight/2, n=120){
+  for(let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2, s=rand(2,6), hue=Math.floor(Math.random()*360);
+    bits.push({x:x*DPR,y:y*DPR, vx:Math.cos(a)*s, vy:Math.sin(a)*s-5, g:.15, life:1, hue});
+  }
+}
+confBtn.onclick = ()=> confetti(Math.random()*innerWidth, 120);
+function confStep(){
+  cctx.clearRect(0,0,ccv.width,ccv.height);
+  bits = bits.filter(b=> b.life>0);
+  for(const b of bits){
+    b.x+=b.vx; b.y+=b.vy; b.vy+=b.g; b.life-=.01;
+    cctx.fillStyle=`hsla(${b.hue},100%,60%,${b.life})`;
+    cctx.fillRect(b.x,b.y, 6*DPR, 6*DPR);
+  }
+  requestAnimationFrame(confStep);
+}
+confStep();
+function rand(a,b=0){return Math.random()*(a-b)+b}
+
+/* ---------- LocalStorage helpers ---------- */
+const LS = {
+  get:(k,fallback)=>{ try{ return JSON.parse(localStorage.getItem(k)) ?? fallback }catch(_){ return fallback } },
+  set:(k,v)=> localStorage.setItem(k, JSON.stringify(v))
+};
+
+/* ===================================================================
+   WHACK-A-MOLE
+=================================================================== */
+const moleGrid = document.getElementById('moleGrid');
+const moleStart = document.getElementById('moleStart');
+const moleStop = document.getElementById('moleStop');
+const moleScoreEl = document.getElementById('moleScore');
+const moleBestEl = document.getElementById('moleBest');
+const moleTimerEl = document.getElementById('moleTimer');
+const moleSpeed = document.getElementById('moleSpeed');
+let moleScore=0, moleBest=LS.get('moleBest',0), moleClock=null, moleTimeLeft=60, moleLoop=null;
+moleBestEl.textContent = moleBest;
+
+const HOLES = 12;
+for(let i=0;i<HOLES;i++){
+  const hole=document.createElement('div'); hole.className='hole';
+  const m=document.createElement('div'); m.className='mole'; hole.appendChild(m);
+  hole.onclick=()=>{ if(hole.classList.contains('show')){ moleScore++; ding(); confetti(hole.getBoundingClientRect().left+50, hole.getBoundingClientRect().top+30); } else { moleScore=Math.max(0,moleScore-1); }
+    moleScoreEl.textContent=moleScore; hole.classList.remove('show'); };
+  moleGrid.appendChild(hole);
+}
+
+function runMoles(){
+  clearInterval(moleLoop);
+  moleLoop = setInterval(()=>{
+    document.querySelectorAll('.hole').forEach(h=>h.classList.remove('show'));
+    const idx = Math.floor(Math.random()*HOLES);
+    moleGrid.children[idx].classList.add('show');
+    setTimeout(()=> moleGrid.children[idx]?.classList.remove('show'), Math.max(250, +moleSpeed.value-200));
+  }, +moleSpeed.value);
+}
+
+moleStart.onclick=()=>{
+  moleScore=0; moleTimeLeft=60; moleScoreEl.textContent=0; moleTimerEl.textContent='Time: 60';
+  runMoles();
+  clearInterval(moleClock);
+  moleClock=setInterval(()=>{
+    moleTimeLeft--; moleTimerEl.textContent='Time: '+moleTimeLeft;
+    if(moleTimeLeft<=0){ stopMole(); }
+  }, 1000);
+};
+function stopMole(){
+  clearInterval(moleLoop); clearInterval(moleClock);
+  if(moleScore>moleBest){ moleBest=moleScore; LS.set('moleBest',moleBest); moleBestEl.textContent=moleBest; }
+  confetti(innerWidth/2, innerHeight/2, 200);
+}
+moleStop.onclick=stopMole;
+
+/* ===================================================================
+   MEMORY MATCH
+=================================================================== */
+const memGrid = document.getElementById('memGrid');
+const memNew = document.getElementById('memNew');
+const memPairs = document.getElementById('memPairs');
+const memMovesEl = document.getElementById('memMoves');
+const memBestEl = document.getElementById('memBest');
+let memMoves=0, memFirst=null, memLock=false, memFound=0, memBest=LS.get('memBest',null);
+memBestEl.textContent = memBest ?? '—';
+
+function newMemory(){
+  memGrid.innerHTML=''; memMoves=0; memFound=0; memMovesEl.textContent=0; memFirst=null; memLock=false;
+  const pairs = clamp(+memPairs.value,6,18);
+  const icons = '🍕🍔🍟🌮🌯🍣🍪🍩🍭🍓🍒🍉🍇🍌🍍🥝🥑🥨🥐🥞🍗🍤🍦🧁🧀☕️🥤🔔⭐️🌙⚡️🔥❄️🎲🎯🎮🎧🎹🎵'.split('');
+  let deck = icons.slice(0,pairs); deck = deck.concat(deck).sort(()=>Math.random()-.5);
+  deck.forEach((ico,i)=>{
+    const card=document.createElement('div'); card.className='cardmem';
+    card.dataset.val=ico;
+    card.innerHTML = `<div class="face front"></div><div class="face back">${ico}</div>`;
+    card.onclick=()=>flipCard(card);
+    memGrid.appendChild(card);
+  });
+}
+function flipCard(card){
+  if(memLock || card.classList.contains('done') || card===memFirst){ return; }
+  card.classList.add('flip');
+  if(!memFirst){ memFirst=card; return; }
+  memMoves++; memMovesEl.textContent=memMoves; memLock=true;
+  if(memFirst.dataset.val===card.dataset.val){
+    setTimeout(()=>{ memFirst.classList.add('done'); card.classList.add('done'); memFirst=null; memLock=false; memFound++; ding();
+      if(memFound===+memPairs.value){ // win
+        if(memBest===null || memMoves<memBest){ memBest=memMoves; LS.set('memBest',memBest); memBestEl.textContent=memBest; }
+        confetti(innerWidth/2, 120, 220);
+      }
+    },180);
+  } else {
+    setTimeout(()=>{ memFirst.classList.remove('flip'); card.classList.remove('flip'); memFirst=null; memLock=false; },450);
+  }
+}
+memNew.onclick=newMemory; newMemory();
+
+/* ===================================================================
+   TYPE SPRINT
+=================================================================== */
+const typeTexts = {
+  short: [
+    "Fast fox jumps over lazy dog.",
+    "Neon nights and pixel lights.",
+    "Waves crash, code splash, ship it."
+  ],
+  med: [
+    "Coding is a superpower when you combine curiosity with persistence. Keep shipping small wins and the big ones follow.",
+    "Keyboard clacks, coffee sips, and that moment when your test finally turns green. Nothing beats a clean run."
+  ],
+  long: [
+    "In the middle of difficulty lies opportunity. Software is not just instructions for machines, it is a mirror for our ideas. The best code tells a clear story: what it does and why it exists. Simplicity takes courage and craft."
+  ]
+};
+const typeBox = document.getElementById('typeText');
+const typeInput = document.getElementById('typeInput');
+const typeSize = document.getElementById('typeSize');
+const typeNew = document.getElementById('typeNew');
+const wpmEl = document.getElementById('wpm');
+const typeBestEl = document.getElementById('typeBest');
+const timeEl = document.getElementById('typeTime');
+let typeTarget="", started=false, t0=0, typeBest=LS.get('typeBest',0);
+typeBestEl.textContent = typeBest;
+
+function newType(){
+  const arr = typeTexts[typeSize.value];
+  typeTarget = arr[Math.floor(Math.random()*arr.length)];
+  typeInput.value=""; started=false; timeEl.textContent='0.00s';
+  renderType();
+}
+function renderType(){
+  const typed = typeInput.value;
+  let html="";
+  for(let i=0;i<typeTarget.length;i++){
+    const ch = typeTarget[i];
+    const got = typed[i];
+    if(got==null){ html += ch; continue; }
+    if(got===ch){ html += `<span class="done">${ch}</span>`; }
+    else { html += `<span class="bad">${ch}</span>`; }
+  }
+  typeBox.innerHTML = html;
+}
+typeInput.addEventListener('input', ()=>{
+  if(!started && typeInput.value.length>0){ started=true; t0=performance.now(); }
+  renderType();
+  if(typeInput.value===typeTarget){
+    const tSec = (performance.now()-t0)/1000;
+    timeEl.textContent = tSec.toFixed(2)+'s';
+    const words = typeTarget.trim().split(/\s+/).length;
+    const wpm = Math.round((words / tSec)*60);
+    wpmEl.textContent = wpm;
+    if(wpm>typeBest){ typeBest=wpm; typeBestEl.textContent=wpm; LS.set('typeBest',wpm); }
+    confetti(innerWidth/2, 120, 200); ding();
+  }
+});
+typeNew.onclick=newType; typeSize.onchange=newType; newType();
+
+/* ===================================================================
+   CLICKER
+=================================================================== */
+const big = document.getElementById('big');
+const clkEl = document.getElementById('clk');
+const clkBestEl = document.getElementById('clkBest');
+const resetClk = document.getElementById('resetClk');
+const comboEl = document.getElementById('combo');
+const floaters = document.getElementById('floaters');
+const shop = document.getElementById('shop');
+
+let clicks = LS.get('clk',0), clkBest = LS.get('clkBest',0), combo=1, lastClick=0, perClick=1, auto=0;
+clkEl.textContent=clicks; clkBestEl.textContent=clkBest;
+const upgrades = [
+  {id:'pc1', name:'+1 per click', cost:20, effect:()=>{ perClick+=1; }},
+  {id:'pc5', name:'+5 per click', cost:120, effect:()=>{ perClick+=5; }},
+  {id:'auto', name:'Auto +1/sec', cost:80, effect:()=>{ auto+=1; }},
+  {id:'auto3', name:'Auto +3/sec', cost:250, effect:()=>{ auto+=3; }},
+  {id:'combo', name:'Combo saver', cost:150, effect:()=>{ combo += 0.2; }}
+];
+const have = new Set(LS.get('shop',[]));
+function drawShop(){
+  shop.innerHTML="";
+  upgrades.forEach(u=>{
+    const owned = have.has(u.id);
+    const btn=document.createElement('button');
+    btn.className='btn'; btn.style.margin='6px'; btn.disabled=owned;
+    btn.textContent = owned ? `✅ ${u.name}` : `${u.name} — ${u.cost}`;
+    btn.onclick=()=>{
+      if(clicks>=u.cost && !owned){
+        clicks-=u.cost; clkEl.textContent=clicks; have.add(u.id); u.effect();
+        LS.set('shop',[...have]); drawShop(); ding(); confetti(innerWidth/2, innerHeight-100, 80);
+      }
+    };
+    shop.appendChild(btn);
+  });
+}
+drawShop();
+
+function addClicks(n){
+  clicks+=n; clkEl.textContent=clicks;
+  if(clicks>clkBest){ clkBest=clicks; clkBestEl.textContent=clkBest; LS.set('clkBest',clkBest); }
+  LS.set('clk',clicks);
+}
+big.addEventListener('click', (e)=>{
+  const now=performance.now();
+  const diff = now - lastClick;
+  combo = diff<800 ? Math.min(5, combo+0.1) : 1;
+  lastClick = now;
+  const gain = Math.round(perClick * combo);
+  addClicks(gain);
+  comboEl.textContent='Combo x'+(Math.round(combo*10)/10);
+  // float text
+  const f=document.createElement('div'); f.className='float'; f.textContent='+'+gain;
+  const r=big.getBoundingClientRect();
+  f.style.left=(r.left + r.width/2)+'px'; f.style.top=(r.top + r.height/2)+'px';
+  document.body.appendChild(f);
+  setTimeout(()=>{ f.style.transition='all .6s'; f.style.transform='translateY(-40px)'; f.style.opacity='0'; },10);
+  setTimeout(()=>f.remove(),650);
+  ding();
+});
+resetClk.onclick=()=>{
+  clicks=0; clkEl.textContent=0; combo=1; perClick=1; auto=0; have.clear(); LS.set('shop',[]); LS.set('clk',0); drawShop();
+};
+
+setInterval(()=>{ if(auto>0){ addClicks(auto); } },1000);
+
+/* ---------- tiny SFX ---------- */
+const pop = document.getElementById('pop');
+function ding(){ try{ pop.currentTime=0; pop.play().catch(()=>{});}catch(_){ } }
+
+/* ---------- Safety helpers ---------- */
+function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
+</script>
+</body>
+</html>
 
