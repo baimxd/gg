@@ -1,570 +1,242 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Pixel Arcade — Mobile Friendly</title>
-<style>
-  :root{
-    --bg1:#0b1020; --bg2:#121a34; --card:#111938; --ink:#e9f1ff; --muted:#b6c3ff;
-    --acc:#72f5ff; --acc2:#b17dff; --good:#7aff9a; --bad:#ff6b8b; --grid:#1a264d;
-    --tile:#0e1533; --shadow:0 14px 45px rgba(0,0,0,.35);
-  }
-  body{margin:0;color:var(--ink);background:
-    radial-gradient(90rem 35rem at 15% 15%, #1a2751 0,#0000 60%),
-    radial-gradient(70rem 40rem at 85% 70%, #1e2d59 0,#0000 60%),
-    linear-gradient(180deg,var(--bg1),var(--bg2));
-    font:600 16px/1.55 Inter,system-ui,Segoe UI,Roboto,Arial; -webkit-tap-highlight-color:transparent;}
-  header{position:sticky;top:0;z-index:20;display:flex;gap:.6rem;align-items:center;justify-content:space-between;padding:.8rem env(safe-area-inset-right) .8rem env(safe-area-inset-left);backdrop-filter:blur(12px);
-    background:#0008;border-bottom:1px solid #ffffff2a;}
-  .brand{display:flex;align-items:center;gap:.6rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
-  .dot{width:.65rem;height:.65rem;border-radius:50%;background:var(--acc);box-shadow:0 0 14px var(--acc)}
-  .right{display:flex;gap:.5rem;align-items:center}
-  .btn{border:1px solid #ffffff2a;background:#ffffff14;padding:.55rem .8rem;border-radius:12px;color:var(--ink);cursor:pointer}
-  .btn:active{transform:scale(.98)}
-  .wrap{max-width:1100px;margin:1rem auto 5rem;padding:0 1rem}
-  /* Home grid */
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-  .card{border:1px solid #ffffff22;background:linear-gradient(180deg,#ffffff12,#ffffff08);border-radius:16px;box-shadow:var(--shadow);padding:14px}
-  .gamecard{cursor:pointer;display:grid;gap:.45rem}
-  .gamecard h3{margin:.1rem 0}
-  .pill{font-size:.75rem;color:var(--muted);padding:.2rem .55rem;border:1px dashed #ffffff33;border-radius:999px;width:max-content}
-  .hide{display:none!important}
-  /* Panel area */
-  .panel{display:none}
-  .panel.active{display:block}
-  .topbar{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin-bottom:.8rem}
-  .score{font-weight:900}
-  /* Canvas container */
-  .stage{background:#00000055;border:1px solid #ffffff26;border-radius:14px;overflow:hidden;display:grid;place-items:center}
-  canvas{width:100%;height:100%}
-  /* Mobile controls */
-  .controls{position:fixed;inset:auto 0 env(safe-area-inset-bottom) 0;display:none;justify-content:center;gap:12px;padding:.7rem;background:linear-gradient(180deg,#0000,#0009);z-index:30}
-  .controls.show{display:flex}
-  .pad{display:grid;grid-template-columns:repeat(3,56px);gap:8px;touch-action:none}
-  .pad button,.padv button{width:56px;height:56px;border-radius:14px;border:1px solid #ffffff30;background:#ffffff14;color:var(--ink);font-weight:900}
-  .padv{display:grid;grid-template-rows:repeat(2,56px);gap:8px}
-  /* 2048 board */
-  .board{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:#0c1433;padding:8px;border-radius:12px;border:1px solid #ffffff22}
-  .tile{aspect-ratio:1/1;display:grid;place-items:center;border-radius:10px;font-weight:900;font-size:1.2rem}
-  .t-0{background:#0f183a;border:1px dashed #ffffff18;color:#ffffff28}
-  .t-2{background:#16214a} .t-4{background:#14285a} .t-8{background:#17336c}
-  .t-16{background:#1b3e7d} .t-32{background:#20498e} .t-64{background:#2554a0}
-  .t-128{background:#2a5fb2} .t-256{background:#2f6ac4} .t-512{background:#3576d6}
-  .t-1024{background:#3b82f6} .t-2048{background:#00b894}
-  /* Memory + Mole */
-  .mem-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-  .memcard{aspect-ratio:3/4;border-radius:12px;display:grid;place-items:center;border:1px solid #ffffff33;background:#0e1737;font-size:28px;cursor:pointer}
-  .holegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-  .hole{aspect-ratio:1/1;border-radius:12px;border:1px solid #ffffff33;background:radial-gradient(120px 60px at 50% 80%, #0008, #0002),#0c1430;position:relative;overflow:hidden}
-  .mole{position:absolute;left:50%;bottom:-100%;transform:translateX(-50%);width:70%;aspect-ratio:1/1;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ffef,#ff7d9b);box-shadow:0 10px 26px #ff6b8b65;border:2px solid #ffffff66;transition:bottom .14s}
-  .hole.show .mole{bottom:8%}
-  /* Reaction */
-  .reactbox{height:300px;border-radius:14px;border:1px solid #ffffff33;display:grid;place-items:center;font-weight:900;font-size:1.4rem}
-  /* Responsive tweaks */
-  @media (max-width: 960px){ .grid{grid-template-columns:repeat(2,1fr)} .mem-grid{grid-template-columns:repeat(4,1fr)} }
-  @media (max-width: 640px){ .grid{grid-template-columns:1fr} .mem-grid{grid-template-columns:repeat(3,1fr)} }
-  /* Theme alt */
-  .light{--bg1:#eef2ff;--bg2:#e6eeff;--ink:#0f172a;--muted:#334155}
-  .light header{background:#fff8;border-bottom-color:#0002}
-  .light .card{background:linear-gradient(180deg,#ffffff,#f7faff);border-color:#0002}
-  .light .stage{background:#fff;border-color:#0002}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Neon Pocket Arcade</title>
+  <style>
+    body{margin:0;font-family:sans-serif;background:#0b1020;color:#fff;text-align:center}
+    header{background:#111a33;padding:10px;display:flex;gap:10px;align-items:center}
+    select,button{padding:8px 12px;border-radius:6px;border:none;font-weight:bold}
+    section{display:none;padding:20px}
+    section.active{display:block}
+    canvas{background:#000;display:block;margin:auto;touch-action:none}
+    .board{display:grid;grid-template-columns:repeat(3,100px);gap:5px;justify-content:center;margin:10px auto}
+    .board button{width:100px;height:100px;font-size:40px}
+    .grid{display:grid;grid-template-columns:repeat(4,70px);gap:5px;justify-content:center}
+    .grid div{width:70px;height:70px;display:flex;align-items:center;justify-content:center;background:#222;font-size:30px}
+    .molegrid{display:grid;grid-template-columns:repeat(3,80px);gap:10px;justify-content:center}
+    .mole{width:80px;height:80px;background:#333}
+    .lit{background:#0f0}
+    .simon{display:grid;grid-template-columns:repeat(2,120px);gap:10px;justify-content:center;margin-top:10px}
+    .simon button{width:120px;height:120px;border:none}
+    .green{background:green}.red{background:red}.blue{background:blue}.yellow{background:gold}
+  </style>
 </head>
 <body>
 <header>
-  <div class="brand"><span class="dot"></span> Pixel Arcade</div>
-  <div class="right">
-    <span class="btn" id="theme">🌙 Night</span>
-    <span class="btn" id="homeBtn">🏠 Home</span>
-    <span class="btn" id="muteBtn">🔊</span>
-  </div>
+  <h2 style="margin:0;flex:1">🎮 Neon Pocket Arcade</h2>
+  <select id="gameSelect">
+    <option value="home">🏠 Home</option>
+    <option value="coin">🪙 Coin Flip</option>
+    <option value="rps">✊ RPS</option>
+    <option value="ttt">⭕ TicTacToe</option>
+    <option value="memory">🧠 Memory</option>
+    <option value="mole">🐹 Whack-a-Mole</option>
+    <option value="react">⚡ Reaction</option>
+    <option value="fifteen">🔢 15 Puzzle</option>
+    <option value="snake">🐍 Snake</option>
+    <option value="flappy">🕊️ Flappy</option>
+    <option value="breakout">🧱 Breakout</option>
+    <option value="simon">🟩🟥 Simon</option>
+    <option value="tap25">🔢 Tap 1→25</option>
+  </select>
 </header>
 
-<div class="wrap">
-  <!-- HOME -->
-  <section id="home" class="panel active">
-    <div class="topbar"><span class="pill">7 games • mobile compatible • local highscores</span></div>
-    <div class="grid" id="gameGrid">
-      <!-- Game cards injected -->
-    </div>
-  </section>
+<!-- Home -->
+<section id="home" class="active">
+  <h1>Welcome 👋</h1>
+  <p>Pick a game from the dropdown above. All 12 games are mobile compatible.</p>
+</section>
 
-  <!-- FLAPPY -->
-  <section id="flappy" class="panel">
-    <div class="topbar">
-      <h2 style="margin:0">🐤 Flappy</h2>
-      <span class="pill">Tap / Click to flap • Best: <b id="flappyBest">0</b></span>
-      <button class="btn" id="flappyStart">Start</button>
-    </div>
-    <div class="card stage" style="height:380px"><canvas id="flappyCanvas"></canvas></div>
-  </section>
+<!-- Coin Flip -->
+<section id="coin"><h1>Coin Flip</h1>
+  <button onclick="flipCoin()">Flip</button>
+  <p id="coinResult"></p>
+</section>
 
-  <!-- 2048 -->
-  <section id="b2048" class="panel">
-    <div class="topbar">
-      <h2 style="margin:0">🧩 2048</h2>
-      <span class="pill">Swipe / Arrow keys • Best: <b id="best2048">0</b></span>
-      <button class="btn" id="new2048">New Game</button>
-      <button class="btn" id="undo2048">Undo</button>
-      <span class="pill">Score: <b id="score2048">0</b></span>
-    </div>
-    <div class="card">
-      <div id="board2048" class="board"></div>
-    </div>
-  </section>
+<!-- RPS -->
+<section id="rps"><h1>Rock Paper Scissors</h1>
+  <button onclick="playRPS('Rock')">Rock</button>
+  <button onclick="playRPS('Paper')">Paper</button>
+  <button onclick="playRPS('Scissors')">Scissors</button>
+  <p id="rpsResult"></p>
+</section>
 
-  <!-- SNAKE -->
-  <section id="snake" class="panel">
-    <div class="topbar">
-      <h2 style="margin:0">🟩 Snake</h2>
-      <span class="pill">Swipe / Arrow keys • Best: <b id="snakeBest">0</b></span>
-      <button class="btn" id="snakeStart">Start</button>
-      <span class="pill">Score: <b id="snakeScore">0</b></span>
-    </div>
-    <div class="card stage" style="height:340px"><canvas id="snakeCanvas"></canvas></div>
-  </section>
+<!-- TicTacToe -->
+<section id="ttt"><h1>TicTacToe</h1>
+  <div class="board" id="tttBoard"></div>
+  <p id="tttMsg"></p>
+</section>
 
-  <!-- PONG -->
-  <section id="pong" class="panel">
-    <div class="topbar">
-      <h2 style="margin:0">🏓 Pong (vs CPU)</h2>
-      <span class="pill">Drag / Arrows • Best rally: <b id="pongBest">0</b></span>
-      <button class="btn" id="pongStart">Start</button>
-    </div>
-    <div class="card stage" style="height:340px"><canvas id="pongCanvas"></canvas></div>
-  </section>
+<!-- Memory Match -->
+<section id="memory"><h1>Memory</h1>
+  <div class="grid" id="memoryGrid"></div>
+</section>
 
-  <!-- MEMORY -->
-  <section id="memory" class="panel">
-    <div class="topbar">
-      <h2 style="margin:0">🧠 Memory Match</h2>
-      <span class="pill">Fewest moves wins • Best: <b id="memBest">—</b></span>
-      <button class="btn" id="memNew">New</button>
-      <label class="pill">Pairs <input id="memPairs" type="number" min="6" max="18" value="10" style="width:64px;margin-left:.4rem;border-radius:8px;border:1px solid #ffffff33;background:#ffffff12;color:inherit;padding:.2rem .4rem"></label>
-      <span class="pill">Moves: <b id="memMoves">0</b></span>
-    </div>
-    <div class="card"><div class="mem-grid" id="memGrid"></div></div>
-  </section>
+<!-- Whack a Mole -->
+<section id="mole"><h1>Whack a Mole</h1>
+  <p>Tap the green square!</p>
+  <div class="molegrid" id="moleGrid"></div>
+  <p>Score: <span id="moleScore">0</span></p>
+</section>
 
-  <!-- WHACK-A-MOLE -->
-  <section id="mole" class="panel">
-    <div class="topbar">
-      <h2 style="margin:0">🐹 Whack-A-Mole</h2>
-      <span class="pill">60s • Best: <b id="moleBest">0</b></span>
-      <button class="btn" id="moleStart">Start</button>
-      <button class="btn" id="moleStop">Stop</button>
-      <label class="pill">Speed <input id="moleSpeed" type="range" min="350" max="1200" step="50" value="700"></label>
-      <span class="pill" id="moleTimer">Time: 60</span>
-      <span class="pill">Score: <b id="moleScore">0</b></span>
-    </div>
-    <div class="card"><div class="holegrid" id="moleGrid"></div></div>
-  </section>
+<!-- Reaction Test -->
+<section id="react"><h1>Reaction Test</h1>
+  <button id="reactBtn">Start</button>
+  <p id="reactMsg"></p>
+</section>
 
-  <!-- REACTION -->
-  <section id="reaction" class="panel">
-    <div class="topbar">
-      <h2 style="margin:0">⚡ Reaction Time</h2>
-      <span class="pill">Wait for green, then tap • Best: <b id="reactBest">—</b></span>
-      <button class="btn" id="reactStart">Start</button>
-    </div>
-    <div class="card reactbox" id="reactBox">Tap START</div>
-  </section>
-</div>
+<!-- 15 Puzzle -->
+<section id="fifteen"><h1>15 Puzzle</h1>
+  <div class="grid" id="fifteenGrid"></div>
+</section>
 
-<!-- Mobile Controls -->
-<div class="controls" id="ctrls">
-  <div class="pad">
-    <span></span><button data-k="up">▲</button><span></span>
-    <button data-k="left">◀</button><button data-k="ok">●</button><button data-k="right">▶</button>
-    <span></span><button data-k="down">▼</button><span></span>
+<!-- Snake -->
+<section id="snake"><h1>Snake</h1>
+  <canvas id="snakeCanvas" width="300" height="300"></canvas>
+</section>
+
+<!-- Flappy -->
+<section id="flappy"><h1>Flappy</h1>
+  <canvas id="flappyCanvas" width="300" height="400"></canvas>
+  <p>Tap/Click to jump</p>
+</section>
+
+<!-- Breakout -->
+<section id="breakout"><h1>Breakout</h1>
+  <canvas id="breakCanvas" width="300" height="400"></canvas>
+</section>
+
+<!-- Simon -->
+<section id="simon"><h1>Simon</h1>
+  <div class="simon">
+    <button class="green" onclick="simonPress(0)"></button>
+    <button class="red" onclick="simonPress(1)"></button>
+    <button class="blue" onclick="simonPress(2)"></button>
+    <button class="yellow" onclick="simonPress(3)"></button>
   </div>
-  <div class="padv">
-    <button data-k="pup">⤒</button>
-    <button data-k="pdown">⤓</button>
-  </div>
-</div>
+  <p id="simonMsg"></p>
+  <button onclick="simonStart()">Start</button>
+</section>
+
+<!-- Tap 25 -->
+<section id="tap25"><h1>Tap 1→25</h1>
+  <div class="grid" id="tapGrid" style="grid-template-columns:repeat(5,60px)"></div>
+  <p id="tapMsg"></p>
+</section>
 
 <script>
-/* ========= helpers ========= */
-const $ = (q,el=document)=>el.querySelector(q);
-const $$ = (q,el=document)=>[...el.querySelectorAll(q)];
-const LS = { get:(k,v)=>{ try{return JSON.parse(localStorage.getItem(k)) ?? v}catch(_){return v}}, set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)) };
-let AC=null, muted=false;
-function beep(freq=660, dur=0.06, type='sine'){
-  if(muted) return;
-  try{
-    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
-    const o = AC.createOscillator(), g = AC.createGain();
-    o.type=type; o.frequency.value=freq; g.gain.value=.05; o.connect(g).connect(AC.destination); o.start();
-    setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime+0.03); o.stop(AC.currentTime+0.04)}, dur*1000);
-  }catch(_){}
-}
-function showPanel(id){
-  $$('.panel').forEach(p=>p.classList.add('hide'));
-  $('#'+id).classList.remove('hide'); $('#'+id).classList.add('active');
-  if(id!=='home'){ $('#home').classList.add('hide'); }
-  // show mobile controls for certain games
-  const ctrl = $('#ctrls'); ctrl.classList.remove('show');
-  if(['snake','pong','b2048'].includes(id)) ctrl.classList.add('show');
-  // scroll to top
-  scrollTo({top:0,behavior:'smooth'});
-}
-
-$('#homeBtn').onclick=()=>{ $$('.panel').forEach(p=>p.classList.add('hide')); $('#home').classList.remove('hide'); }
-$('#theme').onclick=()=>{ document.body.classList.toggle('light'); $('#theme').textContent = document.body.classList.contains('light')?'🌙 Night':'☀️ Day'; }
-$('#muteBtn').onclick=()=>{ muted=!muted; $('#muteBtn').textContent = muted?'🔇':'🔊'; }
-
-/* ========= Home cards ========= */
-const games = [
-  {id:'flappy', icon:'🐤', name:'Flappy'},
-  {id:'b2048', icon:'🧩', name:'2048'},
-  {id:'snake', icon:'🟩', name:'Snake'},
-  {id:'pong', icon:'🏓', name:'Pong'},
-  {id:'memory', icon:'🧠', name:'Memory Match'},
-  {id:'mole', icon:'🐹', name:'Whack-A-Mole'},
-  {id:'reaction', icon:'⚡', name:'Reaction Time'}
-];
-const grid = $('#gameGrid');
-games.forEach(g=>{
-  const card = document.createElement('div'); card.className='card gamecard';
-  card.innerHTML = `<span class="pill">${g.icon}</span><h3>${g.name}</h3><span class="pill">Play</span>`;
-  card.onclick=()=>{ showPanel(g.id); };
-  grid.appendChild(card);
+const select=document.getElementById('gameSelect');
+select.addEventListener('change',()=>{
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(select.value).classList.add('active');
 });
 
-/* ========= Touch/keys (global) ========= */
-let keyState = {};
-addEventListener('keydown', e=> keyState[e.key]=true );
-addEventListener('keyup', e=> keyState[e.key]=false );
-let touchStart=null;
-function handleSwipe(el, cb){
-  el.addEventListener('touchstart', e=>{ const t=e.changedTouches[0]; touchStart={x:t.clientX,y:t.clientY,t:Date.now()} }, {passive:true});
-  el.addEventListener('touchend', e=>{
-    if(!touchStart) return;
-    const t=e.changedTouches[0]; const dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y, dt=Date.now()-touchStart.t;
-    if(Math.hypot(dx,dy)>30 && dt<600){
-      if(Math.abs(dx)>Math.abs(dy)) cb(dx>0?'right':'left');
-      else cb(dy>0?'down':'up');
-    } else cb('tap');
-    touchStart=null;
-  }, {passive:true});
+/* Coin */
+function flipCoin(){
+  document.getElementById('coinResult').textContent=Math.random()<0.5?"Heads":"Tails";
 }
-$('#ctrls').addEventListener('touchstart', e=>e.preventDefault(),{passive:false});
-$('#ctrls').addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
-$('#ctrls').addEventListener('click', e=>{
-  const k=e.target.getAttribute('data-k'); if(!k) return;
-  if(activeSnake){ if(k==='up') snakeTurn(0,-1); if(k==='down') snakeTurn(0,1); if(k==='left') snakeTurn(-1,0); if(k==='right') snakeTurn(1,0); if(k==='ok') snakeBoost(); }
-  if(activePong){ if(k==='pup') pongMove(-1); if(k==='pdown') pongMove(1); }
-  if(active2048){ if(k==='up') move2048(0,-1); if(k==='down') move2048(0,1); if(k==='left') move2048(-1,0); if(k==='right') move2048(1,0); }
-});
 
-/* =========================================================
-   FLAPPY
-========================================================= */
-const fc = $('#flappyCanvas'); const fctx = fc.getContext('2d'); const fBestEl = $('#flappyBest');
-let fW,fH, fBird, fPipes, fScore, fRunning=false, fLoop;
-function resizeFlappy(){ const r = fc.parentElement.getBoundingClientRect(); fc.width=r.width*devicePixelRatio; fc.height=r.height*devicePixelRatio; fW=fc.width; fH=fc.height; }
-addEventListener('resize', resizeFlappy); resizeFlappy();
-function resetFlappy(){
-  fBird={x:fW*0.25, y:fH*0.5, vy:0, r:16*devicePixelRatio};
-  fPipes=[]; fScore=0;
+/* RPS */
+function playRPS(choice){
+  const opts=["Rock","Paper","Scissors"];
+  const comp=opts[Math.floor(Math.random()*3)];
+  let res="Draw";
+  if(choice==="Rock"&&comp==="Scissors"||choice==="Paper"&&comp==="Rock"||choice==="Scissors"&&comp==="Paper") res="You win!";
+  else if(choice!==comp) res="You lose!";
+  document.getElementById('rpsResult').textContent=`You: ${choice} | CPU: ${comp} → ${res}`;
 }
-function spawnPipe(){ const gap=160*devicePixelRatio; const min=60*devicePixelRatio; const top=min+Math.random()*(fH-gap-2*min); fPipes.push({x:fW+40*devicePixelRatio, top:top, bottom:top+gap, passed:false}); }
-function flap(){ if(!fRunning) return; fBird.vy=-6*devicePixelRatio; beep(660,0.05,'square'); }
-$('#flappyStart').onclick=()=>{ showPanel('flappy'); startFlappy(); };
-fc.addEventListener('click', flap); handleSwipe(fc, dir=>{ if(dir==='tap' || dir==='up') flap(); });
 
-function startFlappy(){
-  resizeFlappy(); resetFlappy(); fRunning=true; let last=0, acc=0, pipeTimer=0;
-  cancelAnimationFrame(fLoop);
-  (function loop(t){
-    fLoop=requestAnimationFrame(loop);
-    const dt=Math.min(32, t-last||16); last=t; acc+=dt; pipeTimer+=dt;
-    if(pipeTimer>1400){ spawnPipe(); pipeTimer=0; }
-    // physics
-    fBird.vy+=0.28*devicePixelRatio; fBird.y+=fBird.vy;
-    fPipes.forEach(p=> p.x -= 2.7*devicePixelRatio);
-    // collide & score
-    if(fBird.y<0 || fBird.y>fH){ gameOverFlappy(); return; }
-    for(const p of fPipes){
-      if(!p.passed && p.x < fBird.x - p.w){} // noop
-      const w=54*devicePixelRatio; p.w=w;
-      const inX = (fBird.x+fBird.r > p.x) && (fBird.x-fBird.r < p.x+w);
-      const inGap = (fBird.y-fBird.r > p.top) && (fBird.y+fBird.r < p.bottom);
-      if(inX && !inGap){ gameOverFlappy(); return; }
-      if(!p.passed && p.x+w < fBird.x){ p.passed=true; fScore++; beep(880,0.03,'sine'); }
-    }
-    // draw
-    fctx.clearRect(0,0,fW,fH);
-    // bg
-    fctx.fillStyle='#06203a'; fctx.fillRect(0,0,fW,fH);
-    // pipes
-    fctx.fillStyle='#20e3b2';
-    fPipes = fPipes.filter(p=> p.x>-70*devicePixelRatio);
-    for(const p of fPipes){
-      fctx.fillRect(p.x,0,p.w,p.top);
-      fctx.fillRect(p.x,p.bottom,p.w,fH-p.bottom);
-    }
-    // bird
-    fctx.beginPath(); fctx.fillStyle='#ffd166'; fctx.arc(fBird.x,fBird.y,fBird.r,0,Math.PI*2); fctx.fill();
-    // score
-    fctx.fillStyle='#fff'; fctx.font = `${20*devicePixelRatio}px system-ui`; fctx.fillText(`Score ${fScore}`, 12*devicePixelRatio, 28*devicePixelRatio);
-  })(0);
-}
-function gameOverFlappy(){
-  fRunning=false; cancelAnimationFrame(fLoop); const best=LS.get('flappyBest',0); const nb=Math.max(best,fScore); LS.set('flappyBest',nb); fBestEl.textContent=nb;
-  fctx.fillStyle='rgba(0,0,0,.5)'; fctx.fillRect(0,0,fW,fH);
-  fctx.fillStyle='#fff'; fctx.font=`${26*devicePixelRatio}px system-ui`; fctx.fillText('Game Over — tap Start', fW/2-150*devicePixelRatio, fH/2);
-  beep(220,0.1,'sawtooth');
-}
-fBestEl.textContent = LS.get('flappyBest',0);
-
-/* =========================================================
-   2048
-========================================================= */
-const boardEl = $('#board2048'); const score2048El = $('#score2048'); const best2048El = $('#best2048');
-let board=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]], score2048=0, stack=[];
-function drawBoard(){
-  boardEl.innerHTML=''; board.flat().forEach(v=>{
-    const d=document.createElement('div'); d.className=`tile t-${v||0}`; d.textContent=v||''; boardEl.appendChild(d);
-  });
-  score2048El.textContent=score2048;
-}
-function emptyCells(){ const e=[]; for(let r=0;r<4;r++) for(let c=0;c<4;c++) if(!board[r][c]) e.push([r,c]); return e; }
-function addRandom(){ const e=emptyCells(); if(!e.length) return false; const [r,c]=e[Math.floor(Math.random()*e.length)]; board[r][c]=Math.random()<.9?2:4; return true; }
-function start2048(){ board=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]; score2048=0; stack=[]; addRandom(); addRandom(); drawBoard(); }
-function rotate(times){ while(times--){ const n=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]; for(let r=0;r<4;r++) for(let c=0;c<4;c++) n[c][3-r]=board[r][c]; board=n; } }
-function moveLine(line){
-  const a=line.filter(Boolean); for(let i=0;i<a.length-1;i++){ if(a[i]===a[i+1]){ a[i]*=2; score2048+=a[i]; a.splice(i+1,1); } }
-  while(a.length<4) a.push(0); return a;
-}
-function canMove(){
-  if(emptyCells().length) return true;
-  for(let r=0;r<4;r++) for(let c=0;c<4;c++){
-    const v=board[r][c];
-    if(r<3 && board[r+1][c]===v) return true;
-    if(c<3 && board[r][c+1]===v) return true;
+/* TicTacToe */
+const tttBoard=document.getElementById('tttBoard');
+let tttCells=[]; let tttTurn="X";
+function resetTTT(){
+  tttBoard.innerHTML=""; tttCells=[];
+  for(let i=0;i<9;i++){
+    const b=document.createElement("button");
+    b.addEventListener("click",()=>tttMove(i));
+    tttBoard.appendChild(b); tttCells.push("");
   }
-  return false;
+  document.getElementById('tttMsg').textContent="Your turn";
 }
-let active2048=false;
-function move2048(dx,dy){
-  if(!active2048) return;
-  stack.push(JSON.parse(JSON.stringify(board)));
-  // transform so we always move left
-  if(dx===-1&&dy===0){ /* left */ }
-  else if(dx===1&&dy===0){ rotate(2); }
-  else if(dx===0&&dy===-1){ rotate(1); }
-  else if(dx===0&&dy===1){ rotate(3); }
-  const before=JSON.stringify(board);
-  for(let r=0;r<4;r++) board[r]=moveLine(board[r]);
-  if(JSON.stringify(board)!==before){ addRandom(); beep(700,0.03); }
-  // rotate back
-  if(dx===1&&dy===0){ rotate(2); }
-  else if(dx===0&&dy===-1){ rotate(3); }
-  else if(dx===0&&dy===1){ rotate(1); }
-  drawBoard();
-  const best=LS.get('best2048',0); if(score2048>best){ LS.set('best2048',score2048); }
-  best2048El.textContent = LS.get('best2048',0);
-  if(!canMove()){ active2048=false; alert('No more moves. New game!'); start2048(); }
+function tttMove(i){
+  if(tttCells[i]||tttWinner()) return;
+  tttCells[i]=tttTurn; tttBoard.children[i].textContent=tttTurn;
+  tttTurn=tttTurn==="X"?"O":"X";
+  if(tttWinner()) document.getElementById('tttMsg').textContent=tttWinner()+" wins!";
 }
-$('#new2048').onclick=()=>{ active2048=true; start2048(); };
-$('#undo2048').onclick=()=>{ const prev=stack.pop(); if(prev){ board=prev; drawBoard(); } };
-best2048El.textContent = LS.get('best2048',0); start2048(); active2048=true;
-handleSwipe(boardEl, dir=>{ if(dir==='left')move2048(-1,0); if(dir==='right')move2048(1,0); if(dir==='up')move2048(0,-1); if(dir==='down')move2048(0,1); });
-addEventListener('keydown', e=>{
-  if($('#b2048').classList.contains('active')){
-    if(e.key==='ArrowLeft') move2048(-1,0);
-    if(e.key==='ArrowRight') move2048(1,0);
-    if(e.key==='ArrowUp') move2048(0,-1);
-    if(e.key==='ArrowDown') move2048(0,1);
-  }
-});
+function tttWinner(){
+  const w=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for(const [a,b,c] of w) if(tttCells[a]&&tttCells[a]===tttCells[b]&&tttCells[a]===tttCells[c]) return tttCells[a];
+}
+resetTTT();
 
-/* =========================================================
-   SNAKE
-========================================================= */
-const sc = $('#snakeCanvas'); const sctx = sc.getContext('2d'); const snakeScoreEl=$('#snakeScore'); const snakeBestEl=$('#snakeBest');
-let sW,sH, grid=20, cell, sx,sy,vx,vy, food, tail=[], maxTail=4, sTimer=0, sOn=false, sLoop, snakeScore=0, activeSnake=false;
-function resizeSnake(){ const r=sc.parentElement.getBoundingClientRect(); sc.width=r.width*devicePixelRatio; sc.height=r.height*devicePixelRatio; sW=sc.width; sH=sc.height; cell=Math.floor(24*devicePixelRatio); grid=cell; }
-addEventListener('resize', resizeSnake); resizeSnake();
-function snakeReset(){ sx=5; sy=5; vx=1; vy=0; tail=[]; maxTail=4; snakeScore=0; snakeScoreEl.textContent=0; spawnFood(); }
-function spawnFood(){ food={x:Math.floor(Math.random()*Math.floor(sW/grid-2))+1, y:Math.floor(Math.random()*Math.floor(sH/grid-2))+1}; }
-function snakeTurn(nx,ny){ if(nx===-vx && ny===-vy) return; vx=nx; vy=ny; }
-function snakeBoost(){ /* optional */ }
-$('#snakeStart').onclick=()=>{ showPanel('snake'); startSnake(); };
-function startSnake(){ sOn=true; activeSnake=true; snakeReset(); cancelAnimationFrame(sLoop); let last=0;
-  (function loop(t){ sLoop=requestAnimationFrame(loop); if(t - sTimer < 90) return; sTimer=t;
-    sx+=vx; sy+=vy;
-    const cols=Math.floor(sW/grid), rows=Math.floor(sH/grid);
-    if(sx<0||sy<0||sx>=cols||sy>=rows){ return snakeOver(); }
-    // draw
-    sctx.fillStyle='#06142a'; sctx.fillRect(0,0,sW,sH);
-    // move trail
-    tail.push({x:sx,y:sy}); while(tail.length>maxTail) tail.shift();
-    // eat
-    if(sx===food.x && sy===food.y){ maxTail++; snakeScore++; snakeScoreEl.textContent=snakeScore; spawnFood(); beep(800,0.03); }
-    // collide self
-    for(let i=0;i<tail.length-1;i++){ if(tail[i].x===sx&&tail[i].y===sy){ return snakeOver(); } }
-    // grid draw
-    sctx.fillStyle='#0b1d3d'; for(let x=0;x<cols;x++) for(let y=0;y<rows;y++){ sctx.fillRect(x*grid,y*grid,1,1); }
-    // food
-    sctx.fillStyle='#20e3b2'; sctx.fillRect(food.x*grid,food.y*grid, grid, grid);
-    // snake
-    sctx.fillStyle='#ffd166'; for(const p of tail){ sctx.fillRect(p.x*grid,p.y*grid,grid,grid); }
-  })(0);
-}
-function snakeOver(){ sOn=false; activeSnake=false; cancelAnimationFrame(sLoop); const best=LS.get('snakeBest',0); const nb=Math.max(best,snakeScore); LS.set('snakeBest',nb); snakeBestEl.textContent=nb; beep(220,0.1,'sawtooth'); }
-addEventListener('keydown', e=>{
-  if(!$('#snake').classList.contains('active')) return;
-  if(e.key==='ArrowUp'||e.key==='w') snakeTurn(0,-1);
-  if(e.key==='ArrowDown'||e.key==='s') snakeTurn(0,1);
-  if(e.key==='ArrowLeft'||e.key==='a') snakeTurn(-1,0);
-  if(e.key==='ArrowRight'||e.key==='d') snakeTurn(1,0);
-});
-handleSwipe(sc, dir=>{ if(dir==='up')snakeTurn(0,-1); if(dir==='down')snakeTurn(0,1); if(dir==='left')snakeTurn(-1,0); if(dir==='right')snakeTurn(1,0); });
-snakeBestEl.textContent = LS.get('snakeBest',0);
-
-/* =========================================================
-   PONG
-========================================================= */
-const pc = $('#pongCanvas'); const pctx = pc.getContext('2d'); let pW,pH, ball, p1, p2, pongOn=false, pongLoop, rally=0, bestRally=LS.get('pongBest',0), activePong=false;
-$('#pongBest').textContent = bestRally;
-function resizePong(){ const r=pc.parentElement.getBoundingClientRect(); pc.width=r.width*devicePixelRatio; pc.height=r.height*devicePixelRatio; pW=pc.width; pH=pc.height; }
-addEventListener('resize', resizePong); resizePong();
-function resetPong(){
-  ball={x:pW/2,y:pH/2,vx: (Math.random()>.5?1:-1)*4*devicePixelRatio, vy:(Math.random()-.5)*6*devicePixelRatio, r:7*devicePixelRatio};
-  const ph=70*devicePixelRatio, pw=10*devicePixelRatio;
-  p1={x:20*devicePixelRatio,y:pH/2-ph/2,w:pw,h:ph,vy:0};
-  p2={x:pW-30*devicePixelRatio,y:pH/2-ph/2,w:pw,h:ph,vy:0};
-  rally=0;
-}
-function pongMove(dir){ p2.y += dir*28*devicePixelRatio; }
-pc.addEventListener('pointermove', e=>{ if(!pongOn) return; const r=pc.getBoundingClientRect(); p2.y = (e.clientY-r.top)*devicePixelRatio - p2.h/2; });
-handleSwipe(pc, dir=>{ if(dir==='up') pongMove(-1); if(dir==='down') pongMove(1); });
-$('#pongStart').onclick=()=>{ showPanel('pong'); startPong(); };
-function startPong(){ pongOn=true; activePong=true; resetPong(); cancelAnimationFrame(pongLoop);
-  (function loop(){
-    pongLoop=requestAnimationFrame(loop);
-    // AI
-    const target = ball.y - p1.h/2; p1.y += Math.sign(target - p1.y) * 4.0;
-    // physics
-    ball.x += ball.vx; ball.y += ball.vy;
-    if(ball.y<ball.r || ball.y>pH-ball.r){ ball.vy*=-1; }
-    // collide paddles
-    const hit = (p)=> ball.x-ball.r<p.x+p.w && ball.x+ball.r>p.x && ball.y>p.y && ball.y<p.y+p.h;
-    if(hit(p1) && ball.vx<0){ ball.vx*=-1.05; ball.vy += (ball.y-(p1.y+p1.h/2))*0.05; rally++; beep(700,0.02); }
-    if(hit(p2) && ball.vx>0){ ball.vx*=-1.05; ball.vy += (ball.y-(p2.y+p2.h/2))*0.05; rally++; beep(780,0.02); }
-    // out
-    if(ball.x<-50||ball.x>pW+50){ pongOn=false; activePong=false; const best=LS.get('pongBest',0); if(rally>best){ LS.set('pongBest',rally); $('#pongBest').textContent=rally; } beep(220,0.12,'sawtooth'); }
-    // draw
-    pctx.fillStyle='#06142a'; pctx.fillRect(0,0,pW,pH);
-    pctx.fillStyle='#16305f'; for(let y=0;y<pH;y+=30) pctx.fillRect(pW/2-2,y,4,16);
-    pctx.fillStyle='#20e3b2'; pctx.fillRect(p1.x,p1.y,p1.w,p1.h);
-    pctx.fillStyle='#ffd166'; pctx.fillRect(p2.x,p2.y,p2.w,p2.h);
-    pctx.beginPath(); pctx.fillStyle='#ffffff'; pctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2); pctx.fill();
-    pctx.fillStyle='#fff'; pctx.font=`${18*devicePixelRatio}px system-ui`; pctx.fillText(`Rally ${rally}`, 10*devicePixelRatio, 24*devicePixelRatio);
-  })();
-}
-
-/* =========================================================
-   MEMORY
-========================================================= */
-const memGrid = $('#memGrid'); const memNew=$('#memNew'); const memPairs=$('#memPairs'); const memMovesEl=$('#memMoves'); const memBestEl=$('#memBest');
-let memFirst=null, memLock=false, memFound=0, memMoves=0, memBest=LS.get('memBest',null);
-memBestEl.textContent = memBest ?? '—';
-function newMemory(){
-  memGrid.innerHTML=''; memFirst=null; memLock=false; memFound=0; memMoves=0; memMovesEl.textContent=0;
-  const pairs = Math.max(6, Math.min(18, +memPairs.value||10));
-  const icons = '🍕🍔🍟🌮🌯🍣🍪🍩🍭🍓🍒🍉🍇🍌🍍🥝🥑🥨🥐🥞🍗🍤🍦🧁🧀☕️🥤🔔⭐️🌙⚡️🔥❄️🎲🎯🎮🎧🎹🎵🚗🚀🛸🐱🐶🦊🦄🐼🐨'.split('');
-  let deck = icons.slice(0,pairs); deck = deck.concat(deck).sort(()=>Math.random()-.5);
-  deck.forEach(v=>{
-    const d=document.createElement('div'); d.className='memcard'; d.dataset.val=v; d.innerHTML='?';
-    d.onclick=()=>flipCard(d); memGrid.appendChild(d);
-  });
-}
-function flipCard(d){
-  if(memLock || d.classList.contains('done') || d.classList.contains('flip')) return;
-  d.classList.add('flip'); d.textContent=d.dataset.val;
-  if(!memFirst){ memFirst=d; return; }
-  memMoves++; memMovesEl.textContent=memMoves; memLock=true;
-  if(memFirst.dataset.val===d.dataset.val){
-    setTimeout(()=>{ memFirst.classList.add('done'); d.classList.add('done'); memFirst=null; memLock=false; memFound++; beep(900,0.04);
-      if(memFound=== +memPairs.value){ if(memBest===null || memMoves<memBest){ memBest=memMoves; LS.set('memBest',memBest); memBestEl.textContent=memBest; } alert('GG!'); }
-    },180);
-  }else{
-    setTimeout(()=>{ memFirst.classList.remove('flip'); d.classList.remove('flip'); memFirst.textContent='?'; d.textContent='?'; memFirst=null; memLock=false; },450);
+/* Memory */
+const memGrid=document.getElementById('memoryGrid');
+let memValues=["🍎","🍎","🍌","🍌","🍒","🍒","🍇","🍇"]; memValues.sort(()=>Math.random()-0.5);
+let memOpen=[];
+memValues.forEach((v,i)=>{const d=document.createElement("div"); d.dataset.val=v; d.onclick=()=>memFlip(d); memGrid.appendChild(d)});
+function memFlip(d){
+  if(d.textContent||memOpen.length==2) return;
+  d.textContent=d.dataset.val; memOpen.push(d);
+  if(memOpen.length==2){
+    if(memOpen[0].dataset.val!==memOpen[1].dataset.val) setTimeout(()=>memOpen.forEach(x=>x.textContent=""),600);
+    memOpen=[];
   }
 }
-memNew.onclick=newMemory; newMemory();
 
-/* =========================================================
-   WHACK-A-MOLE
-========================================================= */
-const moleGrid = $('#moleGrid'), moleStart=$('#moleStart'), moleStop=$('#moleStop');
-const moleTimerEl=$('#moleTimer'), moleScoreEl=$('#moleScore'), moleBestEl=$('#moleBest'), moleSpeed=$('#moleSpeed');
-let moleScore=0, moleBest=LS.get('moleBest',0), moleTimeLeft=60, moleLoop=null, moleClock=null;
-moleBestEl.textContent=moleBest;
-for(let i=0;i<12;i++){
-  const hole=document.createElement('div'); hole.className='hole';
-  const m=document.createElement('div'); m.className='mole'; hole.appendChild(m);
-  hole.onclick=()=>{ if(hole.classList.contains('show')){ moleScore++; beep(840,0.03); } else { moleScore=Math.max(0,moleScore-1); beep(220,0.02); }
-    moleScoreEl.textContent=moleScore; hole.classList.remove('show'); };
-  moleGrid.appendChild(hole);
-}
-function runMoles(){
-  clearInterval(moleLoop);
-  moleLoop=setInterval(()=>{
-    $$('.hole').forEach(h=>h.classList.remove('show'));
-    const idx=Math.floor(Math.random()*12); moleGrid.children[idx].classList.add('show');
-    setTimeout(()=> moleGrid.children[idx]?.classList.remove('show'), Math.max(250,+moleSpeed.value-220));
-  }, +moleSpeed.value);
-}
-moleStart.onclick=()=>{
-  moleScore=0; moleTimeLeft=60; moleScoreEl.textContent=0; moleTimerEl.textContent='Time: 60';
-  runMoles(); clearInterval(moleClock);
-  moleClock=setInterval(()=>{ moleTimeLeft--; moleTimerEl.textContent='Time: '+moleTimeLeft; if(moleTimeLeft<=0) stopMoles(); },1000);
+/* Whack a Mole */
+const moleGrid=document.getElementById('moleGrid'); let moleIdx=0; let score=0;
+for(let i=0;i<9;i++){const d=document.createElement("div"); d.className="mole"; d.onclick=()=>{if(i===moleIdx){score++;document.getElementById('moleScore').textContent=score}}; moleGrid.appendChild(d);}
+setInterval(()=>{Array.from(moleGrid.children).forEach(x=>x.classList.remove("lit")); moleIdx=Math.floor(Math.random()*9); moleGrid.children[moleIdx].classList.add("lit")},1000);
+
+/* Reaction */
+const reactBtn=document.getElementById('reactBtn'); let reactStart=0;
+reactBtn.onclick=()=>{
+  reactBtn.disabled=true; document.getElementById('reactMsg').textContent="Wait for green...";
+  setTimeout(()=>{reactBtn.style.background="green"; reactStart=Date.now(); reactBtn.disabled=false; reactBtn.textContent="Click!";},Math.random()*2000+1000);
 };
-function stopMoles(){
-  clearInterval(moleLoop); clearInterval(moleClock);
-  if(moleScore>moleBest){ moleBest=moleScore; LS.set('moleBest',moleBest); moleBestEl.textContent=moleBest; }
-  alert('Time! Score: '+moleScore);
-}
-moleStop.onclick=stopMoles;
+reactBtn.addEventListener('click',()=>{if(reactStart){document.getElementById('reactMsg').textContent=`${Date.now()-reactStart} ms`; reactStart=0; reactBtn.textContent="Start"; reactBtn.style.background="";}});
 
-/* =========================================================
-   REACTION TIME
-========================================================= */
-const reactBox=$('#reactBox'), reactStart=$('#reactStart'); let reactTimer=null, waitStart=0, reactBest=LS.get('reactBest',null);
-$('#reactBest').textContent = reactBest??'—';
-reactStart.onclick=()=>startReact();
-function startReact(){
-  reactBox.style.background='#1e293b'; reactBox.textContent='Wait for GREEN...'; beep(440,0.02);
-  const delay = 800 + Math.random()*2400; waitStart = 0; clearTimeout(reactTimer);
-  const t0=performance.now();
-  reactTimer=setTimeout(()=>{
-    waitStart = performance.now();
-    reactBox.style.background='#16a34a'; reactBox.textContent='TAP!';
-  }, delay);
-}
-reactBox.addEventListener('click', ()=>{
-  if(!reactTimer) return;
-  if(waitStart===0){ // too early
-    reactBox.style.background='#b91c1c'; reactBox.textContent='Too early! Tap Start'; beep(200,0.08,'sawtooth'); clearTimeout(reactTimer); reactTimer=null; return;
-  }
-  const ms = Math.round(performance.now()-waitStart);
-  reactBox.style.background='#0f172a'; reactBox.textContent=`${ms} ms — Tap Start to retry`;
-  if(reactBest===null || ms<reactBest){ reactBest=ms; LS.set('reactBest',ms); $('#reactBest').textContent=ms; }
-  beep(880,0.04); clearTimeout(reactTimer); reactTimer=null;
-});
+/* Fifteen Puzzle */
+const fGrid=document.getElementById('fifteenGrid'); let arr=[...Array(15).keys()].map(x=>x+1).concat([""]);
+function draw15(){fGrid.innerHTML=""; arr.forEach((v,i)=>{const d=document.createElement("div"); d.textContent=v; d.onclick=()=>move15(i); fGrid.appendChild(d)});}
+function move15(i){const empty=arr.indexOf(""); const valid=[i-1,i+1,i-4,i+4]; if(valid.includes(empty)){[arr[i],arr[empty]]=[arr[empty],arr[i]]; draw15();}}
+draw15();
 
-/* ========= nav wiring ========= */
-$$('.panel').forEach(p=> p.classList.add('hide')); $('#home').classList.remove('hide'); $('#home').classList.add('active');
+/* Snake */
+const sCan=document.getElementById('snakeCanvas'); const sCtx=sCan.getContext('2d');
+let sSnake=[{x:5,y:5}],sDir={x:1,y:0},sFood={x:8,y:8};
+function drawSnake(){sCtx.fillStyle="#000";sCtx.fillRect(0,0,300,300);sCtx.fillStyle="lime";sSnake.forEach(p=>sCtx.fillRect(p.x*15,p.y*15,15,15));sCtx.fillStyle="red";sCtx.fillRect(sFood.x*15,sFood.y*15,15,15);}
+function tickSnake(){const head={x:sSnake[0].x+sDir.x,y:sSnake[0].y+sDir.y};sSnake.unshift(head);if(head.x==sFood.x&&head.y==sFood.y){sFood={x:Math.floor(Math.random()*20),y:Math.floor(Math.random()*20)};}else sSnake.pop();drawSnake();}
+setInterval(tickSnake,200);
+document.addEventListener('keydown',e=>{if(e.key=="ArrowUp")sDir={x:0,y:-1};if(e.key=="ArrowDown")sDir={x:0,y:1};if(e.key=="ArrowLeft")sDir={x:-1,y:0};if(e.key=="ArrowRight")sDir={x:1,y:0}});
 
-/* ========= bonus: deep-link via hash ========= */
-if(location.hash){ const id=location.hash.slice(1); if($('#'+id)) showPanel(id); }
-window.addEventListener('hashchange', ()=>{ const id=location.hash.slice(1); if($('#'+id)) showPanel(id); });
+/* Flappy */
+const fCan=document.getElementById('flappyCanvas');const fCtx=fCan.getContext('2d');let fy=200,vel=0,pipes=[{x:300,y:200}];
+function drawFlappy(){fCtx.fillStyle="#000";fCtx.fillRect(0,0,300,400);fCtx.fillStyle="yellow";fCtx.fillRect(50,fy,20,20);fCtx.fillStyle="green";pipes.forEach(p=>{fCtx.fillRect(p.x,0,40,p.y-50);fCtx.fillRect(p.x,p.y+50,40,400)});}
+function tickFlappy(){vel+=1;fy+=vel;pipes.forEach(p=>p.x-=2);if(pipes[0].x<-40)pipes.shift(),pipes.push({x:300,y:100+Math.random()*200});drawFlappy();}
+setInterval(tickFlappy,50);
+fCan.addEventListener('click',()=>vel=-8);
+
+/* Breakout */
+const bCan=document.getElementById('breakCanvas');const bCtx=bCan.getContext('2d');
+let bx=150,by=200,bvx=2,bvy=-2,paddleX=120;const bricks=[];
+for(let r=0;r<3;r++)for(let c=0;c<5;c++)bricks.push({x:60*c+20,y:20*r+20,hit:false});
+function drawBreak(){bCtx.fillStyle="#000";bCtx.fillRect(0,0,300,400);bCtx.fillStyle="white";bCtx.fillRect(paddleX,370,60,10);bCtx.beginPath();bCtx.arc(bx,by,8,0,Math.PI*2);bCtx.fill();bricks.forEach(b=>{if(!b.hit){bCtx.fillStyle="red";bCtx.fillRect(b.x,b.y,50,15)}});}
+function tickBreak(){bx+=bvx;by+=bvy;if(bx<0||bx>300)bvx*=-1;if(by<0)bvy*=-1;if(by>370&&bx>paddleX&&bx<paddleX+60)bvy*=-1;bricks.forEach(br=>{if(!br.hit&&bx>br.x&&bx<br.x+50&&by>br.y&&by<br.y+15){br.hit=true;bvy*=-1}});drawBreak();}
+setInterval(tickBreak,30);
+document.addEventListener('mousemove',e=>{paddleX=e.clientX-bCan.getBoundingClientRect().left-30});
+
+/* Simon */
+let simonSeq=[],simonStep=0;function simonStart(){simonSeq=[];addSimon();}
+function addSimon(){simonSeq.push(Math.floor(Math.random()*4));simonStep=0;flashSimon(0);}
+function flashSimon(i){if(i>=simonSeq.length)return;const idx=simonSeq[i];const btn=document.querySelectorAll('.simon button')[idx];btn.style.opacity=0.5;setTimeout(()=>{btn.style.opacity=1;setTimeout(()=>flashSimon(i+1),500)},500);}
+function simonPress(i){if(simonSeq[simonStep]==i){simonStep++;if(simonStep==simonSeq.length){document.getElementById('simonMsg').textContent="Good!";setTimeout(addSimon,1000)}}else{document.getElementById('simonMsg').textContent="Fail!";}}
+/* Tap 25 */
+const tapGrid=document.getElementById('tapGrid');let nums=[...Array(25).keys()].map(x=>x+1);nums.sort(()=>Math.random()-0.5);nums.forEach(n=>{const d=document.createElement("div");d.textContent=n;d.style.background="#222";d.style.width="60px";d.style.height="60px";d.style.display="flex";d.style.alignItems="center";d.style.justifyContent="center";d.style.fontSize="20px";d.onclick=()=>tapClick(d,n);tapGrid.appendChild(d)});let tapNext=1;
+function tapClick(d,n){if(n==tapNext){d.style.background="lime";tapNext++;if(tapNext>25)document.getElementById('tapMsg').textContent="Done!";}}
 </script>
 </body>
 </html>
