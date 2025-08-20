@@ -1,242 +1,686 @@
-<!doctype html>
+# Create a polished, mobile-friendly 12-game arcade as a single HTML file.
+arcade_html = r"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Neon Pocket Arcade</title>
+  <title>Neon Pocket Arcade — 12 Games</title>
+  <meta name="theme-color" content="#0b1020" />
   <style>
-    body{margin:0;font-family:sans-serif;background:#0b1020;color:#fff;text-align:center}
-    header{background:#111a33;padding:10px;display:flex;gap:10px;align-items:center}
-    select,button{padding:8px 12px;border-radius:6px;border:none;font-weight:bold}
-    section{display:none;padding:20px}
-    section.active{display:block}
-    canvas{background:#000;display:block;margin:auto;touch-action:none}
-    .board{display:grid;grid-template-columns:repeat(3,100px);gap:5px;justify-content:center;margin:10px auto}
-    .board button{width:100px;height:100px;font-size:40px}
-    .grid{display:grid;grid-template-columns:repeat(4,70px);gap:5px;justify-content:center}
-    .grid div{width:70px;height:70px;display:flex;align-items:center;justify-content:center;background:#222;font-size:30px}
-    .molegrid{display:grid;grid-template-columns:repeat(3,80px);gap:10px;justify-content:center}
-    .mole{width:80px;height:80px;background:#333}
-    .lit{background:#0f0}
-    .simon{display:grid;grid-template-columns:repeat(2,120px);gap:10px;justify-content:center;margin-top:10px}
-    .simon button{width:120px;height:120px;border:none}
-    .green{background:green}.red{background:red}.blue{background:blue}.yellow{background:gold}
+    :root{
+      --bg1:#0b1020; --bg2:#111a33; --card:#0f1530; --ui:#e9f1ff;
+      --accent:#72f5ff; --accent2:#b17dff; --good:#7aff9a; --bad:#ff6b8b;
+      --shadow:0 12px 35px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+    html,body{height:100%; margin:0; color:var(--ui); font:500 16px/1.45 Inter, system-ui, Segoe UI, Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 20% 20%, #121b36, transparent 60%),
+        radial-gradient(1000px 700px at 80% 60%, #1a243f, transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+    .app{max-width:1060px; margin:0 auto; padding:14px; display:flex; flex-direction:column; gap:12px}
+    header{
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:10px 12px;
+      display:flex; align-items:center; gap:12px; box-shadow:var(--shadow); position:sticky; top:0; z-index:10; backdrop-filter: blur(8px);
+    }
+    .brand{display:flex; gap:10px; align-items:center; flex:1}
+    .logo{width:40px; height:40px; border-radius:10px;
+      background: radial-gradient(160% 160% at 30% 30%, var(--accent), transparent 60%),
+                  radial-gradient(160% 160% at 70% 70%, var(--accent2), transparent 60%), #0f1933;
+      box-shadow: 0 0 30px rgba(114,245,255,.2), inset 0 0 20px rgba(177,125,255,.2);
+    }
+    h1,h2,h3{margin:0 0 .6rem}
+    .controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    select, button{
+      background:linear-gradient(180deg, #101b3b, #0c142c);
+      border:1px solid rgba(255,255,255,.18); color:var(--ui); border-radius:12px;
+      padding:10px 12px; font-weight:700; letter-spacing:.2px; box-shadow:var(--shadow);
+    }
+    button:active{transform:translateY(1px)}
+    .btn-ghost{background:transparent; border:1px dashed rgba(255,255,255,.25)}
+    .tag{font-size:12px; opacity:.85; padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.18)}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:14px; box-shadow:var(--shadow);
+    }
+    section.hidden{display:none !important}
+    .grid{display:grid; grid-template-columns:repeat(2, 1fr); gap:12px}
+    @media (min-width:850px){ .grid{grid-template-columns:repeat(3, 1fr);} }
+    .notice{opacity:.85; font-size:14px}
+    .center{text-align:center}
+    .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .progress{height:10px; border-radius:999px; background:rgba(255,255,255,.08); overflow:hidden}
+    .progress > div{height:100%; background:linear-gradient(90deg, var(--accent), var(--accent2))}
+    canvas{display:block; margin:8px auto 0; background:#000; border-radius:12px; touch-action:none}
+    /* Boards */
+    .board{display:grid; gap:6px; margin:10px 0 6px}
+    .board.t3{grid-template-columns:repeat(3, minmax(70px, 1fr))}
+    .board button{aspect-ratio:1/1; font-size:32px; font-weight:900; border-radius:12px; border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg, #0d1732, #0b1328); color:var(--ui)}
+    /* On-screen controls */
+    .dpad{display:grid; grid-template-columns:60px 60px 60px; gap:8px; justify-content:center; user-select:none; margin-top:10px}
+    .dpad button{width:60px; height:60px; border-radius:12px; font-weight:900}
+    .wide{width:100%}
+    .small{font-size:12px; opacity:.9}
+    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
   </style>
 </head>
 <body>
-<header>
-  <h2 style="margin:0;flex:1">🎮 Neon Pocket Arcade</h2>
-  <select id="gameSelect">
-    <option value="home">🏠 Home</option>
-    <option value="coin">🪙 Coin Flip</option>
-    <option value="rps">✊ RPS</option>
-    <option value="ttt">⭕ TicTacToe</option>
-    <option value="memory">🧠 Memory</option>
-    <option value="mole">🐹 Whack-a-Mole</option>
-    <option value="react">⚡ Reaction</option>
-    <option value="fifteen">🔢 15 Puzzle</option>
-    <option value="snake">🐍 Snake</option>
-    <option value="flappy">🕊️ Flappy</option>
-    <option value="breakout">🧱 Breakout</option>
-    <option value="simon">🟩🟥 Simon</option>
-    <option value="tap25">🔢 Tap 1→25</option>
-  </select>
-</header>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h2>Neon Pocket Arcade</h2>
+          <div class="small">12 games • mobile + desktop • no libraries</div>
+        </div>
+      </div>
+      <div class="controls">
+        <label class="small">Game:</label>
+        <select id="gameSelect" aria-label="Choose game">
+          <option value="home">🏠 Home</option>
+          <option value="coin">🪙 Coin Flip</option>
+          <option value="rps">✊✋✌️ RPS</option>
+          <option value="ttt">❌⭕ Tic-Tac-Toe (vs CPU)</option>
+          <option value="memory">🧠 Memory Match</option>
+          <option value="mole">🐹 Whack-a-Mole</option>
+          <option value="react">⚡ Reaction Test</option>
+          <option value="fifteen">🔢 15 Puzzle</option>
+          <option value="snake">🐍 Snake</option>
+          <option value="flappy">🕊️ Flappy Square</option>
+          <option value="breakout">🧱 Breakout</option>
+          <option value="simon">🟩🟥 Simon</option>
+          <option value="tap25">🔢 Tap 1→25</option>
+        </select>
+        <button id="fsBtn" title="Fullscreen">⤢</button>
+      </div>
+    </header>
 
-<!-- Home -->
-<section id="home" class="active">
-  <h1>Welcome 👋</h1>
-  <p>Pick a game from the dropdown above. All 12 games are mobile compatible.</p>
-</section>
+    <!-- HOME -->
+    <section id="home" class="card">
+      <h3>Welcome 👋</h3>
+      <p class="notice">Pick a game from the dropdown. Everything is tuned for thumbs (big hit targets, on-screen DPAD where needed) and works offline after first load.</p>
+      <div class="grid">
+        <div class="card">
+          <h4>Tips</h4>
+          <ul class="small">
+            <li>Snake/Flappy/Breakout pause when you switch games.</li>
+            <li>Long-press on canvases won’t select text (disabled).</li>
+            <li>Rotate your phone to landscape for canvas games if you want more space.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Controls</h4>
+          <div class="row small mono">
+            <span>Keyboard: ←↑→↓, Space/Enter, Esc</span>
+            <span>•</span>
+            <span>Touch: buttons / DPAD / tap canvas</span>
+          </div>
+        </div>
+        <div class="card">
+          <h4>About</h4>
+          <p class="small">Pure HTML/CSS/JS in a single file. No tracking. No external libs.</p>
+        </div>
+      </div>
+    </section>
 
-<!-- Coin Flip -->
-<section id="coin"><h1>Coin Flip</h1>
-  <button onclick="flipCoin()">Flip</button>
-  <p id="coinResult"></p>
-</section>
+    <!-- 1) COIN FLIP -->
+    <section id="coin" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>Coin Flip</h3>
+        <span class="tag mono" id="coinStats">Wins: 0 • Losses: 0</span>
+      </div>
+      <div class="center">
+        <div id="coinEl" style="width:140px;height:140px;margin:10px auto; perspective:800px">
+          <div id="coinInner" style="width:100%;height:100%;border-radius:50%;border:2px solid rgba(255,255,255,.2);
+            display:grid;place-items:center; font-size:30px; font-weight:900; background:#0d1732; box-shadow:var(--shadow); transform-style:preserve-3d; transition: transform 1s ease">
+            <div id="heads" style="position:absolute; backface-visibility:hidden">H</div>
+            <div id="tails" style="position:absolute; transform:rotateY(180deg); backface-visibility:hidden">T</div>
+          </div>
+        </div>
+        <div class="row" style="justify-content:center">
+          <button onclick="coinPlay('H')" class="big">Heads</button>
+          <button onclick="coinPlay('T')" class="big">Tails</button>
+        </div>
+        <p id="coinMsg" class="mono"></p>
+      </div>
+    </section>
 
-<!-- RPS -->
-<section id="rps"><h1>Rock Paper Scissors</h1>
-  <button onclick="playRPS('Rock')">Rock</button>
-  <button onclick="playRPS('Paper')">Paper</button>
-  <button onclick="playRPS('Scissors')">Scissors</button>
-  <p id="rpsResult"></p>
-</section>
+    <!-- 2) RPS -->
+    <section id="rps" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>Rock • Paper • Scissors</h3>
+        <span class="tag mono" id="rpsScore">0 : 0</span>
+      </div>
+      <div class="row center" style="justify-content:center">
+        <button onclick="rpsPlay('Rock')">✊ Rock</button>
+        <button onclick="rpsPlay('Paper')">✋ Paper</button>
+        <button onclick="rpsPlay('Scissors')">✌️ Scissors</button>
+      </div>
+      <p id="rpsMsg" class="center mono"></p>
+    </section>
 
-<!-- TicTacToe -->
-<section id="ttt"><h1>TicTacToe</h1>
-  <div class="board" id="tttBoard"></div>
-  <p id="tttMsg"></p>
-</section>
+    <!-- 3) Tic Tac Toe -->
+    <section id="ttt" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>Tic-Tac-Toe (vs CPU)</h3>
+        <button class="btn-ghost" onclick="tttReset()">Reset</button>
+      </div>
+      <div class="board t3" id="tttBoard"></div>
+      <p id="tttMsg" class="mono small"></p>
+    </section>
 
-<!-- Memory Match -->
-<section id="memory"><h1>Memory</h1>
-  <div class="grid" id="memoryGrid"></div>
-</section>
+    <!-- 4) Memory -->
+    <section id="memory" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>Memory Match (4×4)</h3>
+        <span class="tag mono" id="memStats">Moves: 0</span>
+      </div>
+      <div class="board" id="memBoard" style="grid-template-columns:repeat(4, minmax(64px, 1fr));"></div>
+      <div class="row center" style="justify-content:center">
+        <button onclick="memSetup()">Shuffle</button>
+      </div>
+    </section>
 
-<!-- Whack a Mole -->
-<section id="mole"><h1>Whack a Mole</h1>
-  <p>Tap the green square!</p>
-  <div class="molegrid" id="moleGrid"></div>
-  <p>Score: <span id="moleScore">0</span></p>
-</section>
+    <!-- 5) Whack a Mole -->
+    <section id="mole" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>Whack-a-Mole</h3>
+        <span class="tag mono" id="moleStats">Score: 0 • Time: 30</span>
+      </div>
+      <div class="board" id="moleGrid" style="grid-template-columns:repeat(3, minmax(70px, 1fr));"></div>
+      <div class="row center" style="justify-content:center">
+        <button id="moleStart">Start</button>
+        <button class="btn-ghost" onclick="moleStop()">Stop</button>
+      </div>
+      <p class="small center">Tap the green tile. Misses don’t reduce score; you just lose time.</p>
+    </section>
 
-<!-- Reaction Test -->
-<section id="react"><h1>Reaction Test</h1>
-  <button id="reactBtn">Start</button>
-  <p id="reactMsg"></p>
-</section>
+    <!-- 6) Reaction Test -->
+    <section id="react" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>Reaction Test</h3>
+        <span class="tag mono" id="reactStats">Best: —</span>
+      </div>
+      <div class="center">
+        <button id="reactBtn" class="wide" style="height:60px;font-size:18px">Start</button>
+        <p id="reactMsg" class="mono"></p>
+      </div>
+    </section>
 
-<!-- 15 Puzzle -->
-<section id="fifteen"><h1>15 Puzzle</h1>
-  <div class="grid" id="fifteenGrid"></div>
-</section>
+    <!-- 7) 15 Puzzle -->
+    <section id="fifteen" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>15 Puzzle</h3>
+        <span class="tag mono" id="p15Stats">Moves: 0</span>
+      </div>
+      <div class="board" id="p15Board" style="grid-template-columns:repeat(4, minmax(64px, 1fr));"></div>
+      <div class="row center" style="justify-content:center">
+        <button onclick="p15Setup()">Shuffle</button>
+      </div>
+    </section>
 
-<!-- Snake -->
-<section id="snake"><h1>Snake</h1>
-  <canvas id="snakeCanvas" width="300" height="300"></canvas>
-</section>
+    <!-- 8) Snake -->
+    <section id="snake" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>Snake</h3>
+        <span class="tag mono" id="snakeStats">Score: 0</span>
+      </div>
+      <canvas id="snakeCanvas" width="360" height="360"></canvas>
+      <div class="dpad">
+        <div></div><button id="up">↑</button><div></div>
+        <button id="left">←</button><button id="down">↓</button><button id="right">→</button>
+      </div>
+      <div class="row center" style="justify-content:center">
+        <button onclick="snakeReset()">Reset</button>
+      </div>
+    </section>
 
-<!-- Flappy -->
-<section id="flappy"><h1>Flappy</h1>
-  <canvas id="flappyCanvas" width="300" height="400"></canvas>
-  <p>Tap/Click to jump</p>
-</section>
+    <!-- 9) Flappy -->
+    <section id="flappy" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>Flappy Square</h3>
+        <span class="tag mono" id="flappyStats">Score: 0 • Best: 0</span>
+      </div>
+      <canvas id="flappyCanvas" width="360" height="480"></canvas>
+      <p class="small center">Tap / click to jump</p>
+      <div class="row center" style="justify-content:center">
+        <button onclick="flappyReset()">Reset</button>
+      </div>
+    </section>
 
-<!-- Breakout -->
-<section id="breakout"><h1>Breakout</h1>
-  <canvas id="breakCanvas" width="300" height="400"></canvas>
-</section>
+    <!-- 10) Breakout -->
+    <section id="breakout" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>Breakout</h3>
+        <span class="tag mono" id="boStats">Lives: 3</span>
+      </div>
+      <canvas id="boCanvas" width="360" height="480"></canvas>
+      <p class="small center">Drag / move to control the paddle.</p>
+      <div class="row center" style="justify-content:center">
+        <button onclick="boReset()">Reset</button>
+      </div>
+    </section>
 
-<!-- Simon -->
-<section id="simon"><h1>Simon</h1>
-  <div class="simon">
-    <button class="green" onclick="simonPress(0)"></button>
-    <button class="red" onclick="simonPress(1)"></button>
-    <button class="blue" onclick="simonPress(2)"></button>
-    <button class="yellow" onclick="simonPress(3)"></button>
+    <!-- 11) Simon -->
+    <section id="simon" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>Simon</h3>
+        <span class="tag mono" id="simonStats">Round: 0</span>
+      </div>
+      <div class="board" style="grid-template-columns:repeat(2, minmax(120px,1fr)); gap:10px; max-width:520px; margin-inline:auto">
+        <button class="sbtn" data-i="0" style="height:120px;background:#18a34a;border:0;border-radius:16px"></button>
+        <button class="sbtn" data-i="1" style="height:120px;background:#ef4444;border:0;border-radius:16px"></button>
+        <button class="sbtn" data-i="2" style="height:120px;background:#3b82f6;border:0;border-radius:16px"></button>
+        <button class="sbtn" data-i="3" style="height:120px;background:#eab308;border:0;border-radius:16px"></button>
+      </div>
+      <div class="row center" style="justify-content:center">
+        <button onclick="simonStart()">Start</button>
+        <button class="btn-ghost" onclick="simonStrict=!simonStrict; this.textContent = 'Strict: ' + (simonStrict?'ON':'OFF')">Strict: OFF</button>
+      </div>
+      <p class="small center mono" id="simonMsg"></p>
+    </section>
+
+    <!-- 12) Tap 1→25 -->
+    <section id="tap25" class="card hidden">
+      <div class="row" style="justify-content:space-between">
+        <h3>Tap 1 → 25</h3>
+        <span class="tag mono" id="tapStats">Time: — • Best: —</span>
+      </div>
+      <div id="tapGrid" class="board" style="grid-template-columns:repeat(5, minmax(56px, 1fr));"></div>
+      <div class="row center" style="justify-content:center">
+        <button onclick="tapSetup()">Shuffle</button>
+      </div>
+    </section>
   </div>
-  <p id="simonMsg"></p>
-  <button onclick="simonStart()">Start</button>
-</section>
-
-<!-- Tap 25 -->
-<section id="tap25"><h1>Tap 1→25</h1>
-  <div class="grid" id="tapGrid" style="grid-template-columns:repeat(5,60px)"></div>
-  <p id="tapMsg"></p>
-</section>
 
 <script>
-const select=document.getElementById('gameSelect');
-select.addEventListener('change',()=>{
-  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
-  document.getElementById(select.value).classList.add('active');
-});
+// ---------- Routing / visibility ----------
+const sections=[...document.querySelectorAll('section')];
+const select = document.getElementById('gameSelect');
+select.addEventListener('change', ()=>show(select.value));
+function show(id){
+  sections.forEach(s=>s.classList.toggle('hidden', s.id!==id));
+  document.getElementById(id).classList.remove('hidden');
+  // Pause all loops
+  snakePause(true); flappyPause(true); boPause(true);
+  // Resume current if canvas game
+  if(id==='snake') snakePause(false);
+  if(id==='flappy') flappyPause(false);
+  if(id==='breakout') boPause(false);
+}
+show('home');
 
-/* Coin */
-function flipCoin(){
-  document.getElementById('coinResult').textContent=Math.random()<0.5?"Heads":"Tails";
+// Fullscreen
+document.getElementById('fsBtn').onclick=()=>{
+  const el=document.documentElement;
+  if(!document.fullscreenElement) el.requestFullscreen?.();
+  else document.exitFullscreen?.();
+};
+
+// Utility RNG
+const rand=(n)=>Math.floor(Math.random()*n);
+
+// ---------- 1) COIN FLIP ----------
+let coinWins=0, coinLosses=0;
+function coinPlay(choice){ // 'H' or 'T'
+  const coinInner=document.getElementById('coinInner');
+  coinInner.style.transform = `rotateY(${720 + (Math.random()<0.5?0:180)}deg)`;
+  setTimeout(()=>{
+    const result = Math.random()<0.5?'H':'T';
+    const msg = result===choice? (coinWins++, 'You won!'): (coinLosses++, 'You lost!');
+    document.getElementById('coinMsg').textContent = `${msg} Result: ${result==='H'?'Heads':'Tails'}`;
+    document.getElementById('coinStats').textContent = `Wins: ${coinWins} • Losses: ${coinLosses}`;
+  }, 950);
 }
 
-/* RPS */
-function playRPS(choice){
-  const opts=["Rock","Paper","Scissors"];
-  const comp=opts[Math.floor(Math.random()*3)];
-  let res="Draw";
-  if(choice==="Rock"&&comp==="Scissors"||choice==="Paper"&&comp==="Rock"||choice==="Scissors"&&comp==="Paper") res="You win!";
-  else if(choice!==comp) res="You lose!";
-  document.getElementById('rpsResult').textContent=`You: ${choice} | CPU: ${comp} → ${res}`;
+// ---------- 2) RPS ----------
+let rpsYou=0, rpsCPU=0;
+function rpsPlay(me){
+  const opts=['Rock','Paper','Scissors']; const cpu=opts[rand(3)];
+  const rules={Rock:'Scissors',Paper:'Rock',Scissors:'Paper'};
+  let res='Draw';
+  if(rules[me]===cpu) res='You win', rpsYou++;
+  else if(rules[cpu]===me) res='You lose', rpsCPU++;
+  document.getElementById('rpsScore').textContent=`${rpsYou} : ${rpsCPU}`;
+  document.getElementById('rpsMsg').textContent=`You ${me} • CPU ${cpu} → ${res}`;
 }
 
-/* TicTacToe */
-const tttBoard=document.getElementById('tttBoard');
-let tttCells=[]; let tttTurn="X";
-function resetTTT(){
-  tttBoard.innerHTML=""; tttCells=[];
-  for(let i=0;i<9;i++){
-    const b=document.createElement("button");
-    b.addEventListener("click",()=>tttMove(i));
-    tttBoard.appendChild(b); tttCells.push("");
-  }
-  document.getElementById('tttMsg').textContent="Your turn";
+// ---------- 3) TicTacToe (minimax) ----------
+const tttBoard=document.getElementById('tttBoard'); const tttMsg=document.getElementById('tttMsg');
+let tttCells, tttTurn, tttOver;
+function tttReset(){
+  tttBoard.innerHTML=''; tttCells=Array(9).fill(''); tttTurn='X'; tttOver=false; tttMsg.textContent='You are X';
+  for(let i=0;i<9;i++){ const b=document.createElement('button'); b.onclick=()=>tttMove(i); tttBoard.appendChild(b); }
 }
 function tttMove(i){
-  if(tttCells[i]||tttWinner()) return;
-  tttCells[i]=tttTurn; tttBoard.children[i].textContent=tttTurn;
-  tttTurn=tttTurn==="X"?"O":"X";
-  if(tttWinner()) document.getElementById('tttMsg').textContent=tttWinner()+" wins!";
+  if(tttOver || tttCells[i]) return;
+  tttCells[i]='X'; tttBoard.children[i].textContent='X';
+  if(tttCheck()) return;
+  // CPU
+  const move = tttBestMove();
+  if(move!=null){ tttCells[move]='O'; tttBoard.children[move].textContent='O'; tttCheck(); }
 }
-function tttWinner(){
+function tttCheck(){
   const w=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-  for(const [a,b,c] of w) if(tttCells[a]&&tttCells[a]===tttCells[b]&&tttCells[a]===tttCells[c]) return tttCells[a];
+  for(const [a,b,c] of w){
+    if(tttCells[a] && tttCells[a]===tttCells[b] && tttCells[a]===tttCells[c]){
+      tttMsg.textContent=(tttCells[a]==='X'?'You win!':'CPU wins'); tttOver=true; return true;
+    }
+  }
+  if(tttCells.every(v=>v)){ tttMsg.textContent='Draw.'; tttOver=true; return true; }
+  return false;
 }
-resetTTT();
-
-/* Memory */
-const memGrid=document.getElementById('memoryGrid');
-let memValues=["🍎","🍎","🍌","🍌","🍒","🍒","🍇","🍇"]; memValues.sort(()=>Math.random()-0.5);
-let memOpen=[];
-memValues.forEach((v,i)=>{const d=document.createElement("div"); d.dataset.val=v; d.onclick=()=>memFlip(d); memGrid.appendChild(d)});
-function memFlip(d){
-  if(d.textContent||memOpen.length==2) return;
-  d.textContent=d.dataset.val; memOpen.push(d);
-  if(memOpen.length==2){
-    if(memOpen[0].dataset.val!==memOpen[1].dataset.val) setTimeout(()=>memOpen.forEach(x=>x.textContent=""),600);
-    memOpen=[];
+function tttBestMove(){
+  let best=-Infinity, move=null;
+  for(let i=0;i<9;i++) if(!tttCells[i]){ tttCells[i]='O'; const score=miniMax(tttCells,false); tttCells[i]=''; if(score>best){best=score; move=i;}}
+  return move;
+}
+function miniMax(board, isMax){
+  const winner = tttWinner(board);
+  if(winner==='O') return 10;
+  if(winner==='X') return -10;
+  if(board.every(v=>v)) return 0;
+  if(isMax){
+    let best=-Infinity;
+    for(let i=0;i<9;i++) if(!board[i]){ board[i]='O'; best=Math.max(best, miniMax(board,false)); board[i]=''; }
+    return best;
+  }else{
+    let best=Infinity;
+    for(let i=0;i<9;i++) if(!board[i]){ board[i]='X'; best=Math.min(best, miniMax(board,true)); board[i]=''; }
+    return best;
   }
 }
+function tttWinner(b){
+  const w=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for(const [a,b1,c] of w) if(b[a] && b[a]===b[b1] && b[a]===b[c]) return b[a];
+  return null;
+}
+tttReset();
 
-/* Whack a Mole */
-const moleGrid=document.getElementById('moleGrid'); let moleIdx=0; let score=0;
-for(let i=0;i<9;i++){const d=document.createElement("div"); d.className="mole"; d.onclick=()=>{if(i===moleIdx){score++;document.getElementById('moleScore').textContent=score}}; moleGrid.appendChild(d);}
-setInterval(()=>{Array.from(moleGrid.children).forEach(x=>x.classList.remove("lit")); moleIdx=Math.floor(Math.random()*9); moleGrid.children[moleIdx].classList.add("lit")},1000);
+// ---------- 4) Memory Match ----------
+const memSymbols = ['🍎','🍌','🍒','🍇','🍉','🥝','🍑','🍍'];
+let memBoard=[], memOpen=[], memMoves=0, memDone=0;
+function memSetup(){
+  const arr=[...memSymbols, ...memSymbols].sort(()=>Math.random()-0.5);
+  const el=document.getElementById('memBoard'); el.innerHTML='';
+  memBoard=[]; memOpen=[]; memMoves=0; memDone=0;
+  document.getElementById('memStats').textContent='Moves: 0';
+  arr.forEach((sym,i)=>{
+    const b=document.createElement('button'); b.textContent='?'; b.style.fontSize='20px'; b.dataset.sym=sym;
+    b.onclick=()=>memFlip(b);
+    el.appendChild(b); memBoard.push(b);
+  });
+}
+function memFlip(btn){
+  if(btn.disabled || memOpen.length===2 || btn.textContent===btn.dataset.sym) return;
+  btn.textContent=btn.dataset.sym;
+  memOpen.push(btn);
+  if(memOpen.length===2){
+    memMoves++; document.getElementById('memStats').textContent=`Moves: ${memMoves}`;
+    const [a,b]=memOpen;
+    if(a.dataset.sym===b.dataset.sym){
+      setTimeout(()=>{ a.disabled=b.disabled=true; memOpen=[]; memDone+=2; if(memDone===16) alert('GG!'); }, 250);
+    }else{
+      setTimeout(()=>{ a.textContent='?'; b.textContent='?'; memOpen=[]; }, 600);
+    }
+  }
+}
+memSetup();
 
-/* Reaction */
-const reactBtn=document.getElementById('reactBtn'); let reactStart=0;
-reactBtn.onclick=()=>{
-  reactBtn.disabled=true; document.getElementById('reactMsg').textContent="Wait for green...";
-  setTimeout(()=>{reactBtn.style.background="green"; reactStart=Date.now(); reactBtn.disabled=false; reactBtn.textContent="Click!";},Math.random()*2000+1000);
-};
-reactBtn.addEventListener('click',()=>{if(reactStart){document.getElementById('reactMsg').textContent=`${Date.now()-reactStart} ms`; reactStart=0; reactBtn.textContent="Start"; reactBtn.style.background="";}});
+// ---------- 5) Whack-a-Mole ----------
+let moleTimer=null, moleTime=30, moleScore=0, moleIndex=-1;
+const moleGrid=document.getElementById('moleGrid');
+function moleDrawGrid(){
+  moleGrid.innerHTML=''; for(let i=0;i<9;i++){ const b=document.createElement('button'); b.textContent=''; b.onclick=()=>{ if(i===moleIndex){ moleScore++; updateMoleStats(); } }; moleGrid.appendChild(b); }
+}
+function updateMoleStats(){ document.getElementById('moleStats').textContent=`Score: ${moleScore} • Time: ${moleTime}`; }
+function moleStart(){
+  moleStop(); moleTime=30; moleScore=0; updateMoleStats();
+  moleTimer=setInterval(()=>{
+    if(moleTime<=0){ moleStop(); alert('Time! Score: '+moleScore); return; }
+    moleTime--; updateMoleStats();
+    [...moleGrid.children].forEach(b=>b.style.background='');
+    moleIndex=rand(9); const btn=moleGrid.children[moleIndex]; btn.style.background='linear-gradient(180deg,#1f3e1f,#0e1f0e)';
+  }, 900);
+}
+function moleStop(){ clearInterval(moleTimer); moleTimer=null; [...moleGrid.children].forEach(b=>b.style.background=''); updateMoleStats(); }
+document.getElementById('moleStart').onclick=moleStart;
+moleDrawGrid(); updateMoleStats();
 
-/* Fifteen Puzzle */
-const fGrid=document.getElementById('fifteenGrid'); let arr=[...Array(15).keys()].map(x=>x+1).concat([""]);
-function draw15(){fGrid.innerHTML=""; arr.forEach((v,i)=>{const d=document.createElement("div"); d.textContent=v; d.onclick=()=>move15(i); fGrid.appendChild(d)});}
-function move15(i){const empty=arr.indexOf(""); const valid=[i-1,i+1,i-4,i+4]; if(valid.includes(empty)){[arr[i],arr[empty]]=[arr[empty],arr[i]]; draw15();}}
-draw15();
+// ---------- 6) Reaction Test ----------
+let reactState='idle', reactStart=0, reactBest=null;
+const reactBtn=document.getElementById('reactBtn'); const reactMsg=document.getElementById('reactMsg');
+function reactSet(text, cls=''){ reactBtn.textContent=text; reactBtn.className=cls; }
+reactBtn.addEventListener('click',()=>{
+  if(reactState==='idle'){
+    reactState='wait'; reactSet('Wait for GREEN…'); reactMsg.textContent='';
+    const delay= 800 + Math.random()*1700;
+    setTimeout(()=>{
+      if(reactState!=='wait') return;
+      reactState='go'; reactSet('TAP!'); reactBtn.style.background='#166534'; reactStart=performance.now();
+    }, delay);
+  }else if(reactState==='wait'){
+    reactState='idle'; reactSet('Start'); reactBtn.style.background=''; reactMsg.textContent='Too early!';
+  }else if(reactState==='go'){
+    const t = Math.round(performance.now()-reactStart);
+    if(reactBest==null || t<reactBest) reactBest=t;
+    document.getElementById('reactStats').textContent = `Best: ${reactBest} ms`;
+    reactMsg.textContent = `${t} ms`; reactState='idle'; reactSet('Start'); reactBtn.style.background='';
+  }
+});
 
-/* Snake */
-const sCan=document.getElementById('snakeCanvas'); const sCtx=sCan.getContext('2d');
-let sSnake=[{x:5,y:5}],sDir={x:1,y:0},sFood={x:8,y:8};
-function drawSnake(){sCtx.fillStyle="#000";sCtx.fillRect(0,0,300,300);sCtx.fillStyle="lime";sSnake.forEach(p=>sCtx.fillRect(p.x*15,p.y*15,15,15));sCtx.fillStyle="red";sCtx.fillRect(sFood.x*15,sFood.y*15,15,15);}
-function tickSnake(){const head={x:sSnake[0].x+sDir.x,y:sSnake[0].y+sDir.y};sSnake.unshift(head);if(head.x==sFood.x&&head.y==sFood.y){sFood={x:Math.floor(Math.random()*20),y:Math.floor(Math.random()*20)};}else sSnake.pop();drawSnake();}
-setInterval(tickSnake,200);
-document.addEventListener('keydown',e=>{if(e.key=="ArrowUp")sDir={x:0,y:-1};if(e.key=="ArrowDown")sDir={x:0,y:1};if(e.key=="ArrowLeft")sDir={x:-1,y:0};if(e.key=="ArrowRight")sDir={x:1,y:0}});
+// ---------- 7) 15 Puzzle (solvable shuffle) ----------
+let p15=Array.from({length:15},(_,i)=>i+1).concat(['']), p15Moves=0;
+const p15Board=document.getElementById('p15Board');
+function p15Setup(){
+  do{
+    p15=[...Array.from({length:15},(_,i)=>i+1), ''].sort(()=>Math.random()-0.5);
+  }while(!p15Solvable(p15));
+  p15Moves=0; document.getElementById('p15Stats').textContent='Moves: 0'; p15Draw();
+}
+function p15Solvable(a){
+  const arr=a.map(x=>x===''?16:x);
+  let inv=0; for(let i=0;i<15;i++) for(let j=i+1;j<16;j++) if(arr[i]>arr[j]) inv++;
+  const rowFromBottom = 4 - Math.floor(a.indexOf('')/4);
+  return (rowFromBottom%2===0) !== (inv%2===0);
+}
+function p15Draw(){
+  p15Board.innerHTML='';
+  p15.forEach((v,i)=>{
+    const b=document.createElement('button'); b.textContent=v||''; b.onclick=()=>p15Move(i); p15Board.appendChild(b);
+  });
+}
+function p15Move(i){
+  const e=p15.indexOf(''); const neighbors=[i-1,i+1,i-4,i+4];
+  if(neighbors.includes(e)){
+    [p15[i],p15[e]]=[p15[e],p15[i]]; p15Moves++; document.getElementById('p15Stats').textContent=`Moves: ${p15Moves}`; p15Draw();
+    if(p15.join(',')=== [...Array.from({length:15},(_,i)=>i+1),''].join(',')) alert('Solved in '+p15Moves+' moves!');
+  }
+}
+p15Setup();
 
-/* Flappy */
-const fCan=document.getElementById('flappyCanvas');const fCtx=fCan.getContext('2d');let fy=200,vel=0,pipes=[{x:300,y:200}];
-function drawFlappy(){fCtx.fillStyle="#000";fCtx.fillRect(0,0,300,400);fCtx.fillStyle="yellow";fCtx.fillRect(50,fy,20,20);fCtx.fillStyle="green";pipes.forEach(p=>{fCtx.fillRect(p.x,0,40,p.y-50);fCtx.fillRect(p.x,p.y+50,40,400)});}
-function tickFlappy(){vel+=1;fy+=vel;pipes.forEach(p=>p.x-=2);if(pipes[0].x<-40)pipes.shift(),pipes.push({x:300,y:100+Math.random()*200});drawFlappy();}
-setInterval(tickFlappy,50);
-fCan.addEventListener('click',()=>vel=-8);
+// ---------- 8) Snake ----------
+const sCan=document.getElementById('snakeCanvas'), sCtx=sCan.getContext('2d');
+const S=20; // grid size 18x18 on 360
+let sLoop=null, sSnake, sDir, sFood, sScore=0, sPaused=true;
+function snakeReset(){
+  sSnake=[{x:5,y:9},{x:4,y:9},{x:3,y:9}]; sDir={x:1,y:0}; sFood=spawnFood(); sScore=0; snakeDraw();
+}
+function spawnFood(){let p; do{p={x:rand(18),y:rand(18)}}while(sSnake?.some(s=>s.x===p.x&&s.y===p.y)); return p;}
+function snakeDraw(){
+  sCtx.fillStyle='#000'; sCtx.fillRect(0,0,sCan.width,sCan.height);
+  sCtx.fillStyle='#e11d48'; sCtx.fillRect(sFood.x*S, sFood.y*S, S, S);
+  sCtx.fillStyle='#22c55e'; sSnake.forEach(n=>sCtx.fillRect(n.x*S, n.y*S, S, S));
+  document.getElementById('snakeStats').textContent=`Score: ${sScore}`;
+}
+function snakeStep(){
+  const head={x:sSnake[0].x+sDir.x, y:sSnake[0].y+sDir.y};
+  // wrap
+  head.x=(head.x+18)%18; head.y=(head.y+18)%18;
+  if(sSnake.some((p,i)=>i>0 && p.x===head.x && p.y===head.y)){ snakeReset(); return; }
+  sSnake.unshift(head);
+  if(head.x===sFood.x && head.y===sFood.y){ sScore++; sFood=spawnFood(); }
+  else sSnake.pop();
+  snakeDraw();
+}
+function snakePause(v){ if(v){ clearInterval(sLoop); sLoop=null; sPaused=true; } else { if(!sLoop) sLoop=setInterval(snakeStep, 120); sPaused=false; } }
+function snakeResetAndPlay(){ snakeReset(); snakePause(false); }
+snakeReset();
+document.getElementById('up').onclick=()=>{ if(sDir.y!==1) sDir={x:0,y:-1} };
+document.getElementById('down').onclick=()=>{ if(sDir.y!==-1) sDir={x:0,y:1} };
+document.getElementById('left').onclick=()=>{ if(sDir.x!==1) sDir={x:-1,y:0} };
+document.getElementById('right').onclick=()=>{ if(sDir.x!==-1) sDir={x:1,y:0} };
+document.addEventListener('keydown',e=>{
+  if(select.value!=='snake') return;
+  if(e.key==='ArrowUp' && sDir.y!==1) sDir={x:0,y:-1};
+  if(e.key==='ArrowDown' && sDir.y!==-1) sDir={x:0,y:1};
+  if(e.key==='ArrowLeft' && sDir.x!==1) sDir={x:-1,y:0};
+  if(e.key==='ArrowRight' && sDir.x!==-1) sDir={x:1,y:0};
+  if(e.key===' '){ snakePause(!sPaused); }
+});
+function snakeReset(){ sSnake=[{x:5,y:9},{x:4,y:9},{x:3,y:9}]; sDir={x:1,y:0}; sFood=spawnFood(); sScore=0; snakeDraw(); }
+window.snakeReset = snakeReset;
 
-/* Breakout */
-const bCan=document.getElementById('breakCanvas');const bCtx=bCan.getContext('2d');
-let bx=150,by=200,bvx=2,bvy=-2,paddleX=120;const bricks=[];
-for(let r=0;r<3;r++)for(let c=0;c<5;c++)bricks.push({x:60*c+20,y:20*r+20,hit:false});
-function drawBreak(){bCtx.fillStyle="#000";bCtx.fillRect(0,0,300,400);bCtx.fillStyle="white";bCtx.fillRect(paddleX,370,60,10);bCtx.beginPath();bCtx.arc(bx,by,8,0,Math.PI*2);bCtx.fill();bricks.forEach(b=>{if(!b.hit){bCtx.fillStyle="red";bCtx.fillRect(b.x,b.y,50,15)}});}
-function tickBreak(){bx+=bvx;by+=bvy;if(bx<0||bx>300)bvx*=-1;if(by<0)bvy*=-1;if(by>370&&bx>paddleX&&bx<paddleX+60)bvy*=-1;bricks.forEach(br=>{if(!br.hit&&bx>br.x&&bx<br.x+50&&by>br.y&&by<br.y+15){br.hit=true;bvy*=-1}});drawBreak();}
-setInterval(tickBreak,30);
-document.addEventListener('mousemove',e=>{paddleX=e.clientX-bCan.getBoundingClientRect().left-30});
+// ---------- 9) Flappy ----------
+const fCan=document.getElementById('flappyCanvas'), fCtx=fCan.getContext('2d');
+let fLoop=null, fBird, fVel, fPipes, fScore=0, fBest=0, fPaused=true;
+function flappyReset(){
+  fBird={x:70,y:200}; fVel=0; fPipes=[{x:400, gapY:200}]; fScore=0; flappyDraw();
+}
+function flappyPause(v){ if(v){ cancelAnimationFrame(fLoop); fLoop=null; fPaused=true;} else { fPaused=false; fLoop=requestAnimationFrame(flappyStep);} }
+function flappyStep(){
+  fVel+=0.5; fBird.y+=fVel;
+  fPipes.forEach(p=>p.x-=2);
+  if(fPipes[0].x< -60){ fPipes.shift(); }
+  if(fPipes[fPipes.length-1].x<240){ fPipes.push({x:400, gapY: 120+rand(240)}); }
+  // collision / score
+  fPipes.forEach(p=>{
+    if(p.x===fBird.x) fScore++;
+    const gap=70;
+    const inX=fBird.x+18>p.x && fBird.x<p.x+50;
+    const hitTop = fBird.y < p.gapY-gap;
+    const hitBot = fBird.y+18 > p.gapY+gap;
+    if(inX && (hitTop||hitBot)) flappyReset();
+  });
+  if(fBird.y<0 || fBird.y>fCan.height-18){ flappyReset(); }
+  flappyDraw();
+  fLoop=requestAnimationFrame(flappyStep);
+}
+function flappyDraw(){
+  fCtx.fillStyle='#000'; fCtx.fillRect(0,0,fCan.width,fCan.height);
+  // pipes
+  fCtx.fillStyle='#16a34a';
+  fPipes.forEach(p=>{
+    const gap=70;
+    fCtx.fillRect(p.x, 0, 50, p.gapY-gap);
+    fCtx.fillRect(p.x, p.gapY+gap, 50, fCan.height-(p.gapY+gap));
+  });
+  // bird
+  fCtx.fillStyle='#eab308';
+  fCtx.fillRect(fBird.x, fBird.y, 18, 18);
+  fBest=Math.max(fBest,fScore);
+  document.getElementById('flappyStats').textContent=`Score: ${fScore} • Best: ${fBest}`;
+}
+fCan.addEventListener('pointerdown',()=>{ if(select.value!=='flappy') return; fVel=-7; if(fPaused) flappyPause(false); });
+window.flappyReset = flappyReset; flappyReset();
 
-/* Simon */
-let simonSeq=[],simonStep=0;function simonStart(){simonSeq=[];addSimon();}
-function addSimon(){simonSeq.push(Math.floor(Math.random()*4));simonStep=0;flashSimon(0);}
-function flashSimon(i){if(i>=simonSeq.length)return;const idx=simonSeq[i];const btn=document.querySelectorAll('.simon button')[idx];btn.style.opacity=0.5;setTimeout(()=>{btn.style.opacity=1;setTimeout(()=>flashSimon(i+1),500)},500);}
-function simonPress(i){if(simonSeq[simonStep]==i){simonStep++;if(simonStep==simonSeq.length){document.getElementById('simonMsg').textContent="Good!";setTimeout(addSimon,1000)}}else{document.getElementById('simonMsg').textContent="Fail!";}}
-/* Tap 25 */
-const tapGrid=document.getElementById('tapGrid');let nums=[...Array(25).keys()].map(x=>x+1);nums.sort(()=>Math.random()-0.5);nums.forEach(n=>{const d=document.createElement("div");d.textContent=n;d.style.background="#222";d.style.width="60px";d.style.height="60px";d.style.display="flex";d.style.alignItems="center";d.style.justifyContent="center";d.style.fontSize="20px";d.onclick=()=>tapClick(d,n);tapGrid.appendChild(d)});let tapNext=1;
-function tapClick(d,n){if(n==tapNext){d.style.background="lime";tapNext++;if(tapNext>25)document.getElementById('tapMsg').textContent="Done!";}}
+// ---------- 10) Breakout ----------
+const boCan=document.getElementById('boCanvas'), boCtx=boCan.getContext('2d');
+let boLoop=null, boLives=3, boBall, boVel, boPaddleX, boBricks=[], boPaused=true;
+function boReset(){
+  boLives=3; boBall={x:180,y:300}; boVel={x:3,y:-3}; boPaddleX=150;
+  // build bricks
+  boBricks=[];
+  for(let r=0;r<5;r++) for(let c=0;c<7;c++) boBricks.push({x: c*48+20, y: r*18+20, w:44, h:12, hit:false});
+  boDraw();
+}
+function boPause(v){ if(v){ cancelAnimationFrame(boLoop); boLoop=null; boPaused=true; } else { boPaused=false; boLoop=requestAnimationFrame(boStep);} }
+function boStep(){
+  boBall.x+=boVel.x; boBall.y+=boVel.y;
+  if(boBall.x<8||boBall.x>boCan.width-8) boVel.x*=-1;
+  if(boBall.y<8) boVel.y*=-1;
+  if(boBall.y>boCan.height-16){
+    boLives--; if(boLives<=0){ boReset(); } else { boBall={x:180,y:300}; boVel={x:3,y:-3}; }
+  }
+  // paddle
+  if(boBall.y>boCan.height-30 && boBall.x>boPaddleX && boBall.x<boPaddleX+80) boVel.y*=-1;
+  // bricks
+  boBricks.forEach(b=>{
+    if(!b.hit && boBall.x>b.x && boBall.x<b.x+b.w && boBall.y>b.y && boBall.y<b.y+b.h){
+      b.hit=true; boVel.y*=-1;
+    }
+  });
+  boDraw(); boLoop=requestAnimationFrame(boStep);
+}
+function boDraw(){
+  boCtx.fillStyle='#000'; boCtx.fillRect(0,0,boCan.width,boCan.height);
+  boCtx.fillStyle='#fff'; boCtx.beginPath(); boCtx.arc(boBall.x, boBall.y, 8, 0, Math.PI*2); boCtx.fill();
+  boCtx.fillStyle='#e5e7eb'; boCtx.fillRect(boPaddleX, boCan.height-20, 80, 10);
+  boBricks.forEach(b=>{ if(!b.hit){ boCtx.fillStyle='#ef4444'; boCtx.fillRect(b.x,b.y,b.w,b.h); }});
+  document.getElementById('boStats').textContent=`Lives: ${boLives}`;
+}
+boCan.addEventListener('pointermove',e=>{ const r=boCan.getBoundingClientRect(); boPaddleX = Math.min(Math.max(e.clientX-r.left-40, 0), boCan.width-80); });
+boCan.addEventListener('pointerdown',e=>{ const r=boCan.getBoundingClientRect(); boPaddleX = Math.min(Math.max(e.clientX-r.left-40, 0), boCan.width-80); if(boPaused) boPause(false); });
+window.boReset=boReset; boReset();
+
+// ---------- 11) Simon ----------
+let simonSeq=[], simonYou=[], simonRound=0, simonStrict=false;
+const simonBtns=[...document.querySelectorAll('.sbtn')];
+function simonStart(){ simonSeq=[]; simonRound=0; simonNext(); }
+function simonNext(){ simonRound++; document.getElementById('simonStats').textContent='Round: '+simonRound; simonSeq.push(rand(4)); simonPlay(); }
+function simonPlay(){
+  simonYou=[]; let i=0;
+  const flash=()=>{
+    const idx=simonSeq[i], btn=simonBtns[idx]; const bg=btn.style.background; btn.style.filter='brightness(1.7)';
+    setTimeout(()=>{ btn.style.filter=''; i++; if(i<simonSeq.length) setTimeout(flash, 220); }, 220);
+  };
+  setTimeout(flash, 250);
+}
+simonBtns.forEach(b=>b.addEventListener('pointerdown', ()=>{ const i=+b.dataset.i; simonYou.push(i);
+  const idx=simonYou.length-1;
+  if(simonSeq[idx]!==i){ document.getElementById('simonMsg').textContent='Wrong!'; if(simonStrict){ simonStart(); } else { setTimeout(simonPlay, 700); } return; }
+  if(simonYou.length===simonSeq.length){ document.getElementById('simonMsg').textContent='Good!'; setTimeout(simonNext, 700); }
+}));
+
+// ---------- 12) Tap 1→25 ----------
+let tapNext=1, tapStart=0, tapBest=null;
+function tapSetup(){
+  tapNext=1; tapStart=0;
+  const arr=[...Array(25)].map((_,i)=>i+1).sort(()=>Math.random()-0.5);
+  const grid=document.getElementById('tapGrid'); grid.innerHTML='';
+  arr.forEach(n=>{
+    const b=document.createElement('button'); b.textContent=n; b.style.fontSize='18px';
+    b.onclick=()=>tapClick(b, n); grid.appendChild(b);
+  });
+  document.getElementById('tapStats').textContent='Time: — • Best: '+(tapBest?tapBest+'s':'—');
+}
+function tapClick(btn,n){
+  if(n!==tapNext) return;
+  if(tapNext===1) tapStart=performance.now();
+  btn.disabled=true; btn.style.opacity=.45; tapNext++;
+  if(tapNext>25){ const t=((performance.now()-tapStart)/1000).toFixed(2); if(!tapBest||t<tapBest) tapBest=t; document.getElementById('tapStats').textContent=`Time: ${t}s • Best: ${tapBest}s`; alert('GG: '+t+'s'); }
+}
+tapSetup();
+
+// ---------- Visibility helpers for canvas games ----------
+function flappyPauseWrapper(){ if(select.value==='flappy'){ flappyPause(false); } else flappyPause(true); }
+function boPauseWrapper(){ if(select.value==='breakout'){ boPause(false); } else boPause(true); }
+function snakePauseWrapper(){ if(select.value==='snake'){ snakePause(false); } else snakePause(true); }
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){ flappyPause(true); boPause(true); snakePause(true); }
+  else { flappyPauseWrapper(); boPauseWrapper(); snakePauseWrapper(); }
+});
+
+// Initialize first visible section explicitly
+show('home');
 </script>
 </body>
-</html>
+</html>"""
+path = "/mnt/data/neon_arcade_12.html"
+with open(path, "w", encoding="utf-8") as f:
+    f.write(arcade_html)
+
+path
